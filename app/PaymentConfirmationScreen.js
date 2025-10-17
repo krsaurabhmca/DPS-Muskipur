@@ -1,4 +1,5 @@
 import { FontAwesome5 } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import axios from 'axios';
 import * as Haptics from 'expo-haptics';
@@ -159,6 +160,7 @@ export default function PaymentConfirmationScreen() {
   };
   
   const processPayment = async () => {
+    let user_id = await AsyncStorage.getItem('user_id');
     setIsSubmitting(true);
     
     try {
@@ -176,7 +178,8 @@ export default function PaymentConfirmationScreen() {
         payment_date: formattedDate,
         remarks: formData.remarks,
         total: netAmount.toString(),
-        paid_amount: paidAmount.toString()
+        paid_amount: paidAmount.toString(),
+        created_by: user_id || '1' // Default to '1' if user_id is not found
       };
       
       console.log("Sending payment data:", paymentData);

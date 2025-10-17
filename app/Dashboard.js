@@ -1,8 +1,11 @@
 import { FontAwesome5 } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Dimensions,
   Image,
   ScrollView,
@@ -18,11 +21,13 @@ const { width } = Dimensions.get("window");
 
 export default function DashboardScreen({ navigation, route }) {
   const [greeting, setGreeting] = useState("");
-  const [userData, setUserData] = useState({
-    id: "2",
-    full_name: "OfferPlant Technologies",
-    user_type: "ADMIN",
-    status: "ACTIVE",
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState({
+    student: 0,
+    absent: 0,
+    collection: "0.00",
+    full_name: "",
+    user_type: ""
   });
 
   useEffect(() => {
@@ -36,11 +41,68 @@ export default function DashboardScreen({ navigation, route }) {
       setGreeting("Good Evening");
     }
 
-    // If user data is passed via route, update state
-    if (route?.params?.userData) {
-      setUserData(route.params.userData);
+    // Fetch dashboard data
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      // Get user_id from AsyncStorage
+      const userId = await AsyncStorage.getItem('user_id') || '2';
+      
+      const response = await fetch('https://dpsmushkipur.com/bine/api.php?task=dashboard', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ user_id: parseInt(userId) }),
+      });
+      
+      const data = await response.json();
+      setDashboardData(data);
+      console.log("Dashboard data:", data);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [route?.params?.userData]);
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Logout',
+          onPress: async () => {
+            try {
+              // Clear all AsyncStorage data
+              await AsyncStorage.multiRemove([
+                'user_id',
+                'full_name',
+                'user_type',
+                'isLoggedIn'
+              ]);
+              
+              // Navigate to login screen
+              //router.replace('/index');
+              router.replace('/'); // or '/login'
+            } catch (error) {
+              console.error('Error during logout:', error);
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
+          },
+          style: 'destructive'
+        }
+      ]
+    );
+  };
 
   const menuItems = [
     {
@@ -59,14 +121,6 @@ export default function DashboardScreen({ navigation, route }) {
       route: "Attendance",
       description: "Mark daily attendance",
     },
-    // {
-    //   id: 3,
-    //   title: "Pay Fee",
-    //   icon: "money-bill-wave",
-    //   color: "#38b000",
-    //   route: "PayFee",
-    //   description: "Process fee payments",
-    // },
     {
       id: 4,
       title: "Collection Report",
@@ -88,37 +142,49 @@ export default function DashboardScreen({ navigation, route }) {
       title: "Homework",
       icon: "book",
       color: "#7209b7",
-      route: "Homework",
+      route: "HomeWork",
       description: "Assign & track homework",
     },
     {
       id: 7,
-      title: "Marks Entry",
-      icon: "chart-line",
+      title: "Notice Board",
+      icon: "bullhorn",
       color: "#4cc9f0",
-      route: "MarksEntry",
-      description: "Record examination marks",
+      route: "Notice",
+      description: "Update Important Notices",
     },
-    // {
-    //   id: 8,
-    //   title: "Profile",
-    //   icon: "user-circle",
-    //   color: "#6c757d",
-    //   route: "Profile",
-    //   description: "Manage your account",
-    // },
   ];
 
   const handleMenuPress = (route) => {
     router.push(`/${route}`);
     console.log(`Navigating to ${route}`);
-    // In a real app, you would use navigation.navigate(route)
   };
+
+  // Format currency with ₹ symbol
+  const formatCurrency = (amount) => {
+    return `₹${amount}`;
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+          <LinearGradient
+            colors={["#1e3c72", "#2a5298"]}
+            style={styles.loadingContainer}
+          >
+            <ActivityIndicator size="large" color="#ffffff" />
+            <Text style={styles.loadingText}>Loading Dashboard...</Text>
+          </LinearGradient>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container} edges={["bottom"]}>
-        <StatusBar barStyle="light-content" backgroundColor="#1e3c72" />
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+        <StatusBar barStyle="dark-content" backgroundColor="#1e3c72" />
 
         <View style={styles.header}>
           <LinearGradient
@@ -128,18 +194,28 @@ export default function DashboardScreen({ navigation, route }) {
           <View style={styles.headerContent}>
             <View style={styles.userInfo}>
               <Text style={styles.greeting}>{greeting},</Text>
-              <Text style={styles.userName}>{userData.full_name}</Text>
+              <Text style={styles.userName}>{dashboardData.full_name}</Text>
               <View style={styles.userRolePill}>
-                <Text style={styles.userRole}>{userData.user_type}</Text>
+                <Text style={styles.userRole}>{dashboardData.user_type}</Text>
               </View>
             </View>
-            <View style={styles.avatarContainer}>
-              <Image
-                source={require("./assets/default.png")} // Replace with appropriate path
-                style={styles.avatar}
-                defaultSource={require("./assets/default.png")} // Fallback avatar
-              />
-              <View style={styles.statusIndicator} />
+            <View style={styles.headerActions}>
+              <View style={styles.avatarContainer}>
+                <Image
+                  source={require("./assets/logo.png")}
+                  style={styles.avatar}
+                  defaultSource={require("./assets/default.png")}
+                />
+                <View style={styles.statusIndicator} />
+              </View>
+              <TouchableOpacity 
+                style={styles.logoutButton}
+                onPress={handleLogout}
+                activeOpacity={0.7}
+              >
+                <FontAwesome5 name="sign-out-alt" size={18} color="white" />
+                <Text style={styles.logoutText}>Logout</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -165,7 +241,7 @@ export default function DashboardScreen({ navigation, route }) {
             <View
               style={[styles.quickStatCard, { backgroundColor: "#4cc9f0" }]}
             >
-              <Text style={styles.quickStatNumber}>156</Text>
+              <Text style={styles.quickStatNumber}>{dashboardData.student}</Text>
               <Text style={styles.quickStatLabel}>Total Students</Text>
               <FontAwesome5
                 name="users"
@@ -177,8 +253,10 @@ export default function DashboardScreen({ navigation, route }) {
             <View
               style={[styles.quickStatCard, { backgroundColor: "#38b000" }]}
             >
-              <Text style={styles.quickStatNumber}>₹15,680</Text>
-              <Text style={styles.quickStatLabel}>Today's Collection</Text>
+              <Text style={styles.quickStatNumber}>
+                {formatCurrency(dashboardData.collection)}
+              </Text>
+              <Text style={styles.quickStatLabel}>Total Collection</Text>
               <FontAwesome5
                 name="rupee-sign"
                 size={24}
@@ -189,7 +267,7 @@ export default function DashboardScreen({ navigation, route }) {
             <View
               style={[styles.quickStatCard, { backgroundColor: "#d62828" }]}
             >
-              <Text style={styles.quickStatNumber}>12</Text>
+              <Text style={styles.quickStatNumber}>{dashboardData.absent}</Text>
               <Text style={styles.quickStatLabel}>Absent Today</Text>
               <FontAwesome5
                 name="user-slash"
@@ -293,27 +371,6 @@ export default function DashboardScreen({ navigation, route }) {
             </View>
           </View>
         </ScrollView>
-
-        <View style={styles.bottomNav}>
-          <TouchableOpacity style={styles.bottomNavItem}>
-            <FontAwesome5 name="home" size={20} color="#1e3c72" />
-            <Text style={[styles.bottomNavText, styles.bottomNavActive]}>
-              Home
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.bottomNavItem}>
-            <FontAwesome5 name="calendar-alt" size={20} color="#6c757d" />
-            <Text style={styles.bottomNavText}>Calendar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.bottomNavItem}>
-            <FontAwesome5 name="bell" size={20} color="#6c757d" />
-            <Text style={styles.bottomNavText}>Notifications</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.bottomNavItem}>
-            <FontAwesome5 name="cog" size={20} color="#6c757d" />
-            <Text style={styles.bottomNavText}>Settings</Text>
-          </TouchableOpacity>
-        </View>
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -324,8 +381,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8f9fa",
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#ffffff',
+  },
   header: {
-    height: 180,
+    height: 140, // Increased height to accommodate logout button
     overflow: "hidden",
   },
   headerGradient: {
@@ -333,14 +400,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    height: 180,
+    height: 140, // Match the header height
   },
   headerContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
-    paddingTop: 40,
+    padding: 15,
+    paddingTop: 15,
   },
   userInfo: {
     flex: 1,
@@ -368,8 +435,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
+  headerActions: {
+    alignItems: "center",
+  },
   avatarContainer: {
     position: "relative",
+    marginBottom: 10,
   },
   avatar: {
     width: 60,
@@ -377,6 +448,8 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     borderWidth: 3,
     borderColor: "#ffffff",
+    backgroundColor: "#ffffff",
+    padding: 4,
   },
   statusIndicator: {
     position: "absolute",
@@ -389,12 +462,26 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#ffffff",
   },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  logoutText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "600",
+    marginLeft: 5,
+  },
   scrollContainer: {
     flex: 1,
   },
   contentContainer: {
     padding: 20,
-    paddingBottom: 80,
+    paddingBottom: 30,  // Reduced padding since bottom bar is removed
   },
   dashboardHeader: {
     marginBottom: 20,
@@ -538,31 +625,5 @@ const styles = StyleSheet.create({
   activityTime: {
     fontSize: 12,
     color: "#95a5a6",
-  },
-  bottomNav: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 70,
-    backgroundColor: "#ffffff",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: "#ecf0f1",
-    paddingBottom: 10,
-  },
-  bottomNavItem: {
-    alignItems: "center",
-  },
-  bottomNavText: {
-    fontSize: 12,
-    marginTop: 4,
-    color: "#6c757d",
-  },
-  bottomNavActive: {
-    color: "#1e3c72",
-    fontWeight: "bold",
   },
 });

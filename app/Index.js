@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -22,7 +22,42 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    // Check if user is already logged in
+    checkLoginStatus();
+  }, []);
+
+  const checkLoginStatus = async () => {
+    try {
+      const isLoggedIn = await AsyncStorage.getItem('isLoggedIn');
+      if (isLoggedIn === 'true') {
+        // User is already logged in, redirect to dashboard
+        router.replace('/Dashboard');
+      }
+    } catch (error) {
+      console.error('Error checking login status:', error);
+    } finally {
+      setIsCheckingAuth(false);
+    }
+  };
+
+  const storeUserData = async (userData) => {
+    try {
+      await AsyncStorage.setItem('user_id', userData.id);
+      await AsyncStorage.setItem('full_name', userData.full_name);
+      await AsyncStorage.setItem('user_type', userData.user_type);
+      await AsyncStorage.setItem('isLoggedIn', 'true');
+      
+      console.log('User data stored successfully');
+      return true;
+    } catch (error) {
+      console.error('Error storing user data:', error);
+      return false;
+    }
+  };
 
   const handleLogin = async () => {
     // Basic validation
@@ -43,29 +78,42 @@ export default function LoginScreen({ navigation }) {
         }
       );
 
-      setIsLoading(false);
-
       if (response.data.status === 'success' && response.data.count > 0) {
         // Successfully logged in
         const userData = response.data.data[0];
         
-        // Here you would typically store user data in a global state or context
-        // and navigate to the main screen
-        Alert.alert(
-          "Login Successful",
-          `Welcome ${userData.full_name}!`,
-          [{ text: "OK", onPress: () => router.replace('/dashboard') }]
-        );
+        // Store user data in AsyncStorage
+        const stored = await storeUserData(userData);
+        
+        if (stored) {
+          // Navigate to dashboard
+          router.replace('/Dashboard');
+        } else {
+          setError('Failed to store login information. Please try again.');
+        }
       } else {
         // Login failed with API error
         setError('Invalid username or password');
       }
     } catch (err) {
-      setIsLoading(false);
-      setError('An error occurred. Please try again later.');
       console.error('Login error:', err);
+      setError(
+        err.response?.data?.message || 
+        'Network error. Please check your connection and try again.'
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  if (isCheckingAuth) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#4a80f5" />
+        <Text style={styles.loadingText}>Checking login status...</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -77,7 +125,7 @@ export default function LoginScreen({ navigation }) {
       >
         <View style={styles.logoContainer}>
           <Image
-            source={{ uri: 'https://reactnative.dev/img/tiny_logo.png' }} // Replace with school logo
+            source={require('./assets/logo.png')}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -156,6 +204,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f7',
   },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
+  },
   keyboardAvoidingView: {
     flex: 1,
     justifyContent: 'center',
@@ -174,7 +231,7 @@ const styles = StyleSheet.create({
   schoolName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1a1a2e',
+    color: '#023c09ff',
     marginBottom: 5,
   },
   tagline: {
@@ -199,7 +256,7 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#1a1a2e',
+    color: '#023c09ff',
     marginBottom: 5,
   },
   subtitleText: {
