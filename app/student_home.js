@@ -34,7 +34,7 @@ const FEATURES = [
     id: 'attendance',
     title: 'Attendance',
     icon: 'calendar-outline',
-    route: '/student/attendance',
+    route: '/AttendanceScreen',
     color: '#4CAF50',
     gradient: ['#4CAF50', '#81C784'],
   },
@@ -42,7 +42,7 @@ const FEATURES = [
     id: 'homework',
     title: 'Homework',
     icon: 'book-outline',
-    route: '/student/homework',
+    route: '/HomeWorkScreen',
     color: '#2196F3',
     gradient: ['#2196F3', '#64B5F6'],
   },
@@ -66,7 +66,7 @@ const FEATURES = [
     id: 'holiday',
     title: 'Holidays',
     icon: 'sunny-outline',
-    route: '/student/holiday',
+    route: '/HolidayScreen',
     color: '#9C27B0',
     gradient: ['#9C27B0', '#BA68C8'],
   },
@@ -74,7 +74,7 @@ const FEATURES = [
     id: 'leave',
     title: 'Leave Application',
     icon: 'document-text-outline',
-    route: '/student/leave-application',
+    route: '/StudentLeaveApply',
     color: '#00BCD4',
     gradient: ['#00BCD4', '#4DD0E1'],
   },
@@ -90,7 +90,7 @@ const FEATURES = [
     id: 'payment-history',
     title: 'Payment History',
     icon: 'receipt-outline',
-    route: '/student/payment-history',
+    route: '/PaymentHistoryScreen',
     color: '#FF5722',
     gradient: ['#FF5722', '#FF8A65'],
   },
@@ -106,7 +106,7 @@ const FEATURES = [
     id: 'complain',
     title: 'Complain',
     icon: 'alert-circle-outline',
-    route: '/student/complain',
+    route: '/ComplaintScreen',
     color: '#F44336',
     gradient: ['#F44336', '#E57373'],
   },
@@ -114,7 +114,7 @@ const FEATURES = [
     id: 'help',
     title: 'Help & Support',
     icon: 'help-circle-outline',
-    route: '/student/help-support',
+    route: '/HelpAndSupport',
     color: '#607D8B',
     gradient: ['#607D8B', '#90A4AE'],
   },
@@ -228,7 +228,7 @@ export default function StudentHomeScreen() {
           onPress: async () => {
             await AsyncStorage.removeItem('student_id');
             await AsyncStorage.removeItem('student_data');
-            router.replace('/');
+            router.replace('/Index');
           },
           style: 'destructive',
         },
@@ -261,6 +261,7 @@ export default function StudentHomeScreen() {
     return null;
   }
 
+          console.log(student);
   return (
     <View style={styles.container}>
       {/* Header with Gradient */}
@@ -328,8 +329,8 @@ export default function StudentHomeScreen() {
             { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
           ]}
         >
-          <StatCard icon="checkbox-outline" value="92%" label="Attendance" />
-          <StatCard icon="book-outline" value="5" label="Pending HW" />
+          <StatCard icon="checkbox-outline" value={student.total_paid} label="Total Paid" />
+          <StatCard icon="book-outline" value={student.current_dues} label="Current Dues" />
           <StatCard icon="trophy-outline" value="A+" label="Last Exam" />
         </Animated.View>
       </LinearGradient>

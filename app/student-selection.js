@@ -35,13 +35,14 @@ export default function StudentSelectionScreen() {
       useNativeDriver: true,
     }).start();
   }, []);
-
   const handleStudentSelect = (student) => {
     AsyncStorage.setItem('student_id', student.id);
     AsyncStorage.setItem('student_name', student.student_name);
     AsyncStorage.setItem('student_class', student.student_class);
     AsyncStorage.setItem('student_section', student.student_section);
     AsyncStorage.setItem('student_roll', student.student_roll);
+    AsyncStorage.setItem('total_paid', student.total_paid);
+    AsyncStorage.setItem('current_dues', student.current_dues);
     router.replace('./student_home');
   };
 

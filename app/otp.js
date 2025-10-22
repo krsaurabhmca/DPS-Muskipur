@@ -3,15 +3,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Animated,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const COLORS = {
@@ -143,7 +143,7 @@ export default function OTPScreen() {
         } else {
           // Single student - navigate to home
           router.replace({
-            pathname: '/(tabs)/home',
+            pathname: '/student_home',
             params: {
               studentData: JSON.stringify(data.data[0]),
             },

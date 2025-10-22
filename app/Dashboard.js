@@ -92,7 +92,7 @@ export default function DashboardScreen({ navigation, route }) {
               
               // Navigate to login screen
               //router.replace('/index');
-              router.replace('/'); // or '/login'
+              router.replace('/admin_login'); // or '/login'
             } catch (error) {
               console.error('Error during logout:', error);
               Alert.alert('Error', 'Failed to logout. Please try again.');
@@ -152,6 +152,24 @@ export default function DashboardScreen({ navigation, route }) {
       color: "#4cc9f0",
       route: "Notice",
       description: "Update Important Notices",
+    },
+    {
+      id: 8,
+      title: "Leave Applications",
+      icon: "calendar-alt",
+      color: "#f72585",
+      route: "AppliedLeaveScreen",
+      description: "Review Student Leaves",
+      adminOnly: true,
+    },
+    {
+      id: 9,
+      title: "Complaints",
+      icon: "comments",
+      color: "#7209b7",
+      route: "ComplaintsScreen",
+      description: "View Student Complaints",
+      adminOnly: true,
     },
   ];
 

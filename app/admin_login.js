@@ -192,7 +192,7 @@ export default function AdminLogin({ navigation }) {
         </View>
 
         <View style={styles.footer}>
-         <TouchableOpacity style={styles.forgotPasswordContainer} onPress={()=>{router.push('/')}}>
+         <TouchableOpacity style={styles.forgotPasswordContainer} onPress={()=>{router.push('/Index')}}>
             <Text style={styles.forgotPasswordText}>I Am Student /Parent </Text>
           </TouchableOpacity>
         </View>

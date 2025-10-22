@@ -2,19 +2,18 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-    Dimensions,
-    Linking,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Linking,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import * as Animatable from 'react-native-animatable';
 import RenderHtml from 'react-native-render-html';
 
 const { width } = Dimensions.get('window');
@@ -39,7 +38,6 @@ export default function NoticeBoardScreen() {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     fetchNotices();
@@ -87,13 +85,6 @@ export default function NoticeBoardScreen() {
       } else {
         setError('No notices found');
       }
-
-      // Animate
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }).start();
     } catch (err) {
       console.error('Error fetching notices:', err);
       setError('Failed to load notices');
@@ -194,15 +185,9 @@ export default function NoticeBoardScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Animatable.View 
-          animation="pulse" 
-          easing="ease-out" 
-          iterationCount="infinite"
-        >
-          <View style={styles.logoCircle}>
-            <Ionicons name="notifications" size={40} color={COLORS.primary} />
-          </View>
-        </Animatable.View>
+        <View style={styles.logoCircle}>
+          <Ionicons name="notifications" size={40} color={COLORS.primary} />
+        </View>
         <Text style={styles.loadingText}>Loading notices...</Text>
       </View>
     );
@@ -326,19 +311,14 @@ export default function NoticeBoardScreen() {
           </View>
         ) : (
           filteredNotices.map((notice, index) => (
-            <Animatable.View
-              key={notice.id}
-              animation="fadeInUp"
-              delay={index * 100}
-              style={{ opacity: fadeAnim }}
-            >
+            <View key={notice.id}>
               <NoticeCard
                 notice={notice}
                 formatDate={formatDate}
                 getTimeAgo={getTimeAgo}
                 handleAttachment={handleAttachment}
               />
-            </Animatable.View>
+            </View>
           ))
         )}
       </ScrollView>
