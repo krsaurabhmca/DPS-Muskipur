@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -110,6 +111,21 @@ export default function OTPScreen() {
     ]).start();
   };
 
+  const storeStudentData = async (studentData) => {
+    try {
+      await AsyncStorage.setItem('student_id', studentData.id);
+      await AsyncStorage.setItem('student_admission', studentData.student_admission);
+      await AsyncStorage.setItem('student_name', studentData.student_name);
+      await AsyncStorage.setItem('student_class', studentData.student_class);
+      await AsyncStorage.setItem('student_section', studentData.student_section);
+      await AsyncStorage.setItem('student_mobile', studentData.student_mobile);
+      await AsyncStorage.setItem('student_photo', studentData.student_photo);
+      await AsyncStorage.setItem('isLoggedIn', 'true');
+    } catch (error) {
+      console.error('Error storing student data:', error);
+    }
+  };
+
   const verifyOTP = async (otpValue) => {
     setLoading(true);
     setError('');
@@ -129,35 +145,47 @@ export default function OTPScreen() {
         }
       );
 
-      const data = await response.json();
+      const result = await response.json();
 
-      if (data.status === 'success') {
-        if (data.count > 1) {
+      if (result.status === 'success') {
+        const { count, data, notices } = result;
+        await AsyncStorage.setItem('all_students', JSON.stringify(data));
+        if (count > 1) {
           // Multiple students - show selection screen
           router.push({
             pathname: '/student-selection',
             params: {
-              students: JSON.stringify(data.data),
+              students: JSON.stringify(data),
+              notices: JSON.stringify(notices || []),
             },
           });
-        } else {
-          // Single student - navigate to home
+        } else if (count === 1) {
+          // Single student - store data and navigate to home
+          const studentData = data[0];
+          await storeStudentData(studentData);
+
           router.replace({
             pathname: '/student_home',
             params: {
-              studentData: JSON.stringify(data.data[0]),
+              studentData: JSON.stringify(studentData),
+              notices: JSON.stringify(notices || []),
             },
           });
+        } else {
+          setError('No student found');
+          setOtp(['', '', '', '']);
+          inputRefs[0].current?.focus();
+          shakeAnimation();
         }
       } else {
-        setError(data.msg || 'Invalid OTP');
+        setError(result.msg || 'Invalid OTP');
         setOtp(['', '', '', '']);
         inputRefs[0].current?.focus();
         shakeAnimation();
       }
     } catch (err) {
       setError('Network error. Please try again.');
-      console.error(err);
+      console.error('OTP Verification Error:', err);
     } finally {
       setLoading(false);
     }
@@ -170,17 +198,28 @@ export default function OTPScreen() {
     setError('');
 
     try {
-      await fetch('https://dpsmushkipur.com/bine/api.php?task=send_otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          student_mobile: phoneNumber,
-        }),
-      });
+      const response = await fetch(
+        'https://dpsmushkipur.com/bine/api.php?task=send_otp',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            student_mobile: phoneNumber,
+          }),
+        }
+      );
+
+      const result = await response.json();
+      
+      if (result.status === 'success') {
+        // OTP sent successfully
+        console.log('OTP resent successfully');
+      }
     } catch (err) {
-      console.error(err);
+      console.error('Resend OTP Error:', err);
+      setError('Failed to resend OTP. Please try again.');
     }
   };
 
@@ -236,6 +275,7 @@ export default function OTPScreen() {
                 onChangeText={(value) => handleOtpChange(value, index)}
                 onKeyPress={(e) => handleKeyPress(e, index)}
                 selectTextOnFocus
+                editable={!loading}
               />
             ))}
           </Animated.View>
@@ -279,6 +319,14 @@ export default function OTPScreen() {
               </Text>
             </View>
           )}
+
+          {/* Help Text */}
+          <View style={styles.helpContainer}>
+            <Ionicons name="information-circle-outline" size={18} color={COLORS.white} />
+            <Text style={styles.helpText}>
+              OTP is valid for 10 minutes
+            </Text>
+          </View>
         </Animated.View>
       </KeyboardAvoidingView>
     </LinearGradient>
@@ -384,6 +432,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginLeft: 10,
     fontWeight: '600',
+    flex: 1,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -393,6 +442,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 14,
     marginTop: 10,
+    fontWeight: '500',
   },
   resendContainer: {
     alignItems: 'center',
@@ -425,5 +475,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginLeft: 10,
     flex: 1,
+  },
+  helpContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 'auto',
+    marginBottom: 30,
+    opacity: 0.8,
+  },
+  helpText: {
+    color: COLORS.white,
+    fontSize: 13,
+    marginLeft: 8,
   },
 });

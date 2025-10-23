@@ -50,7 +50,7 @@ const StudentProfile = () => {
       const studentId = await AsyncStorage.getItem('student_id');
       
       if (!studentId) {
-        router.replace('/index');
+        router.replace('/');
         return;
       }
 
@@ -107,7 +107,7 @@ const StudentProfile = () => {
           onPress: async () => {
             await AsyncStorage.removeItem('student_id');
             await AsyncStorage.removeItem('student_data');
-            router.replace('/index');
+            router.replace('/');
           },
           style: 'destructive',
         },

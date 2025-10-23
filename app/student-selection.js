@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Image,
@@ -25,25 +25,78 @@ const COLORS = {
 export default function StudentSelectionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const students = JSON.parse(params.students);
+  const [students, setStudents] = useState([]);
+  const [notices, setNotices] = useState([]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Parse students
+    if (params.students) {
+      try {
+        const studentsData = JSON.parse(params.students);
+        setStudents(studentsData);
+        console.log('Students loaded:', studentsData.length);
+      } catch (e) {
+        console.error('Error parsing students:', e);
+      }
+    }
+
+    // Parse notices
+    if (params.notices) {
+      try {
+        const noticesData = JSON.parse(params.notices);
+        setNotices(noticesData);
+        console.log('Notices loaded:', noticesData.length);
+      } catch (e) {
+        console.error('Error parsing notices:', e);
+      }
+    }
+
+    // Start animation
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 500,
       useNativeDriver: true,
     }).start();
   }, []);
-  const handleStudentSelect = (student) => {
-    AsyncStorage.setItem('student_id', student.id);
-    AsyncStorage.setItem('student_name', student.student_name);
-    AsyncStorage.setItem('student_class', student.student_class);
-    AsyncStorage.setItem('student_section', student.student_section);
-    AsyncStorage.setItem('student_roll', student.student_roll);
-    AsyncStorage.setItem('total_paid', student.total_paid);
-    AsyncStorage.setItem('current_dues', student.current_dues);
-    router.replace('./student_home');
+
+  const handleStudentSelect = async (student) => {
+    try {
+      // Store all student data in AsyncStorage
+      await AsyncStorage.setItem('student_id', student.id);
+      await AsyncStorage.setItem('student_admission', student.student_admission);
+      await AsyncStorage.setItem('student_name', student.student_name);
+      await AsyncStorage.setItem('student_class', student.student_class);
+      await AsyncStorage.setItem('student_section', student.student_section);
+      await AsyncStorage.setItem('student_roll', student.student_roll);
+      await AsyncStorage.setItem('student_type', student.student_type);
+      await AsyncStorage.setItem('student_photo', student.student_photo);
+      await AsyncStorage.setItem('student_sex', student.student_sex);
+      await AsyncStorage.setItem('student_mobile', student.student_mobile);
+      await AsyncStorage.setItem('total_paid', student.total_paid);
+      await AsyncStorage.setItem('current_dues', student.current_dues);
+      await AsyncStorage.setItem('student_data', JSON.stringify(student));
+      await AsyncStorage.setItem('isLoggedIn', 'true');
+
+      // Store notices
+      if (notices && notices.length > 0) {
+        await AsyncStorage.setItem('notices', JSON.stringify(notices));
+        console.log('Notices stored in AsyncStorage');
+      }
+
+      console.log('Student selected:', student.student_name);
+
+      // Navigate to home with student data and notices
+      router.replace({
+        pathname: '/student_home',
+        params: {
+          studentData: JSON.stringify(student),
+          notices: JSON.stringify(notices),
+        },
+      });
+    } catch (error) {
+      console.error('Error storing student data:', error);
+    }
   };
 
   return (
@@ -54,16 +107,28 @@ export default function StudentSelectionScreen() {
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         {/* Header */}
         <View style={styles.header}>
+          <View style={styles.headerIconContainer}>
+            <Ionicons name="people" size={40} color={COLORS.accent} />
+          </View>
           <Text style={styles.title}>Select Student</Text>
           <Text style={styles.subtitle}>
-            Choose which student you want to view
+            {students.length} student{students.length > 1 ? 's' : ''} found on this number
           </Text>
+          {notices.length > 0 && (
+            <View style={styles.noticesBadge}>
+              <Ionicons name="notifications" size={14} color={COLORS.accent} />
+              <Text style={styles.noticesBadgeText}>
+                {notices.length} new notice{notices.length > 1 ? 's' : ''}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Students List */}
         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
         >
           {students.map((student, index) => (
             <Animated.View
@@ -97,7 +162,7 @@ export default function StudentSelectionScreen() {
                       {student.student_photo !== 'no_image.jpg' ? (
                         <Image
                           source={{
-                            uri: `https://dpsmushkipur.com/uploads/${student.student_photo}`,
+                            uri: `https://dpsmushkipur.com/bine/upload/${student.student_photo}`,
                           }}
                           style={styles.avatar}
                         />
@@ -140,7 +205,7 @@ export default function StudentSelectionScreen() {
                       </Text>
                       <View style={styles.detailRow}>
                         <Ionicons
-                          name="calendar-outline"
+                          name="school-outline"
                           size={14}
                           color={COLORS.gray}
                         />
@@ -156,7 +221,7 @@ export default function StudentSelectionScreen() {
                           color={COLORS.gray}
                         />
                         <Text style={styles.detailText}>
-                          Roll No: {student.student_roll}
+                          Roll: {student.student_roll} | Adm: {student.student_admission}
                         </Text>
                       </View>
                       <View style={styles.detailRow}>
@@ -168,6 +233,19 @@ export default function StudentSelectionScreen() {
                         <Text style={styles.detailText}>
                           {student.student_type}
                         </Text>
+                      </View>
+                      
+                      {/* Payment Info */}
+                      <View style={styles.paymentInfo}>
+                        <View style={styles.paymentItem}>
+                          <Text style={styles.paymentLabel}>Paid:</Text>
+                          <Text style={styles.paymentValuePaid}>₹{student.total_paid}</Text>
+                        </View>
+                        <View style={styles.paymentDivider} />
+                        <View style={styles.paymentItem}>
+                          <Text style={styles.paymentLabel}>Due:</Text>
+                          <Text style={styles.paymentValueDue}>₹{student.current_dues}</Text>
+                        </View>
                       </View>
                     </View>
 
@@ -199,9 +277,19 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     marginBottom: 30,
+    alignItems: 'center',
+  },
+  headerIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: COLORS.white,
     marginBottom: 8,
@@ -211,12 +299,30 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     opacity: 0.9,
   },
+  noticesBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 10,
+    gap: 6,
+  },
+  noticesBadgeText: {
+    fontSize: 12,
+    color: COLORS.white,
+    fontWeight: '600',
+  },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 20,
+    paddingBottom: 100,
   },
   studentCard: {
-    marginBottom: 20,
+    marginBottom: 15,
     borderRadius: 20,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -226,7 +332,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   cardGradient: {
-    padding: 20,
+    padding: 15,
   },
   studentInfo: {
     flexDirection: 'row',
@@ -240,6 +346,8 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
+    borderWidth: 3,
+    borderColor: COLORS.primary,
   },
   avatarPlaceholder: {
     width: 70,
@@ -247,6 +355,8 @@ const styles = StyleSheet.create({
     borderRadius: 35,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 3,
+    borderColor: COLORS.white,
   },
   badge: {
     position: 'absolute',
@@ -268,10 +378,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   studentName: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
     color: COLORS.primary,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   detailRow: {
     flexDirection: 'row',
@@ -279,8 +389,67 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   detailText: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.gray,
     marginLeft: 6,
+  },
+  paymentInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F0F0',
+    borderRadius: 8,
+    padding: 8,
+    marginTop: 8,
+  },
+  paymentItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  paymentLabel: {
+    fontSize: 10,
+    color: COLORS.gray,
+    marginBottom: 2,
+  },
+  paymentValuePaid: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: COLORS.secondary,
+  },
+  paymentValueDue: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#F44336',
+  },
+  paymentDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: COLORS.lightGray,
+  },
+  backButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.white,
+    paddingVertical: 15,
+    borderRadius: 25,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  backButtonText: {
+    color: COLORS.primary,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

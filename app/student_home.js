@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Sharing from 'expo-sharing';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -50,7 +52,7 @@ const FEATURES = [
     id: 'exam-report',
     title: 'Exam Report',
     icon: 'trophy-outline',
-    route: '/student/exam-report',
+    route: '/ExamReportScreen',
     color: '#FF9800',
     gradient: ['#FF9800', '#FFB74D'],
   },
@@ -82,7 +84,7 @@ const FEATURES = [
     id: 'payment',
     title: 'Online Payment',
     icon: 'card-outline',
-    route: '/student/online-payment',
+    route: '/OnlinePaymentScreen',
     color: '#8BC34A',
     gradient: ['#8BC34A', '#AED581'],
   },
@@ -98,7 +100,7 @@ const FEATURES = [
     id: 'bus',
     title: 'Live Bus Location',
     icon: 'bus-outline',
-    route: '/student/live-bus',
+    route: '/LiveBusLocation',
     color: '#795548',
     gradient: ['#795548', '#A1887F'],
   },
@@ -130,32 +132,101 @@ const FEATURES = [
 
 export default function StudentHomeScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [student, setStudent] = useState(null);
+  const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [downloadingNoticeId, setDownloadingNoticeId] = useState(null);
+  const [hasMultipleStudents, setHasMultipleStudents] = useState(false);
+  const [allStudents, setAllStudents] = useState([]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
-    fetchStudentProfile();
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      initializeScreen();
+    }
   }, []);
+
+  const initializeScreen = async () => {
+    console.log('Initializing screen...');
+    console.log('Params received:', params);
+    
+    // Load student data first
+    if (params.studentData) {
+      try {
+        const studentData = JSON.parse(params.studentData);
+        console.log('Student data loaded from params');
+        setStudent(studentData);
+        await AsyncStorage.setItem('student_data', JSON.stringify(studentData));
+      } catch (e) {
+        console.error('Error parsing student data:', e);
+      }
+    }
+
+    // Load notices
+    if (params.notices) {
+      try {
+        const noticesData = typeof params.notices === 'string' 
+          ? JSON.parse(params.notices) 
+          : params.notices;
+        
+        console.log('Notices loaded from params:', noticesData.length);
+        
+        if (noticesData && Array.isArray(noticesData)) {
+          setNotices(noticesData);
+          await AsyncStorage.setItem('notices', JSON.stringify(noticesData));
+        }
+      } catch (e) {
+        console.error('Error parsing notices:', e);
+      }
+    } else {
+      // Try to load from AsyncStorage
+      try {
+        const cachedNotices = await AsyncStorage.getItem('notices');
+        if (cachedNotices) {
+          const parsedNotices = JSON.parse(cachedNotices);
+          console.log('Notices loaded from cache:', parsedNotices.length);
+          setNotices(parsedNotices);
+        }
+      } catch (e) {
+        console.error('Error loading cached notices:', e);
+      }
+    }
+
+    // Check if there are multiple students
+    try {
+      const studentsData = await AsyncStorage.getItem('all_students');
+      if (studentsData) {
+        const students = JSON.parse(studentsData);
+        if (students && students.length > 1) {
+          setHasMultipleStudents(true);
+          setAllStudents(students);
+        }
+      }
+    } catch (e) {
+      console.error('Error checking multiple students:', e);
+    }
+
+    await fetchStudentProfile();
+  };
 
   const fetchStudentProfile = async () => {
     try {
       setLoading(true);
       setError('');
 
-      // Get student_id from AsyncStorage
       const studentId = await AsyncStorage.getItem('student_id');
       
       if (!studentId) {
-        // No student_id found, redirect to login
-        router.replace('/index');
+        router.replace('/');
         return;
       }
 
-      // Fetch student profile from API
       const response = await fetch(
         'https://dpsmushkipur.com/bine/api.php?task=get_student_profile',
         {
@@ -175,7 +246,6 @@ export default function StudentHomeScreen() {
         const studentData = data[0];
         setStudent(studentData);
         
-        // Update AsyncStorage with latest data
         await AsyncStorage.setItem('student_data', JSON.stringify(studentData));
 
         // Start animations
@@ -198,7 +268,6 @@ export default function StudentHomeScreen() {
       console.error('Error fetching student profile:', err);
       setError('Network error. Please check your connection.');
       
-      // Try to load cached data
       const cachedData = await AsyncStorage.getItem('student_data');
       if (cachedData) {
         setStudent(JSON.parse(cachedData));
@@ -214,6 +283,109 @@ export default function StudentHomeScreen() {
     setRefreshing(false);
   };
 
+  const handleSwitchStudent = () => {
+    Alert.alert(
+      'Switch Student',
+      'Do you want to switch to another student profile?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Switch',
+          onPress: () => {
+            router.push({
+              pathname: '/student-selection',
+              params: {
+                students: JSON.stringify(allStudents),
+                notices: JSON.stringify(notices),
+              },
+            });
+          },
+        },
+      ],
+    );
+  };
+
+  const handleViewAllNotices = () => {
+    router.push({
+      pathname: '/noticeboard',
+      params: {
+        notices: JSON.stringify(notices),
+      },
+    });
+  };
+
+  const handleDownloadAttachment = async (noticeId, attachment, title) => {
+    if (!attachment) return;
+
+    setDownloadingNoticeId(noticeId);
+
+    try {
+      const url = `https://dpsmushkipur.com/bine/required/upload/${attachment}`;
+      const fileExtension = attachment.split('.').pop();
+      const fileName = `${title.replace(/[^a-zA-Z0-9]/g, '_')}.${fileExtension}`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+
+      console.log('Downloading from:', url);
+
+      const downloadResumable = FileSystem.createDownloadResumable(
+        url,
+        fileUri,
+        {},
+        (downloadProgress) => {
+          const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
+          console.log(`Download progress: ${Math.round(progress * 100)}%`);
+        }
+      );
+
+      const result = await downloadResumable.downloadAsync();
+      
+      if (result && result.uri) {
+        const fileInfo = await FileSystem.getInfoAsync(result.uri);
+        
+        if (fileInfo.exists && fileInfo.size > 0) {
+          const isAvailable = await Sharing.isAvailableAsync();
+          
+          if (isAvailable) {
+            await Sharing.shareAsync(result.uri, {
+              dialogTitle: 'Open Notice Attachment',
+            });
+          } else {
+            Alert.alert(
+              'Success',
+              'Attachment downloaded successfully!',
+              [{ text: 'OK' }]
+            );
+          }
+        } else {
+          throw new Error('Downloaded file is empty or corrupted');
+        }
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      Alert.alert(
+        'Download Failed', 
+        'Failed to download attachment. Please try again.'
+      );
+    } finally {
+      setDownloadingNoticeId(null);
+    }
+  };
+
+  const stripHtmlTags = (html) => {
+    if (!html) return '';
+    return html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '');
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const options = { day: '2-digit', month: 'short', year: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+  };
+
   const handleLogout = () => {
     Alert.alert(
       'Logout',
@@ -226,9 +398,8 @@ export default function StudentHomeScreen() {
         {
           text: 'Logout',
           onPress: async () => {
-            await AsyncStorage.removeItem('student_id');
-            await AsyncStorage.removeItem('student_data');
-            router.replace('/Index');
+            await AsyncStorage.clear();
+            router.replace('/');
           },
           style: 'destructive',
         },
@@ -261,7 +432,6 @@ export default function StudentHomeScreen() {
     return null;
   }
 
-          console.log(student);
   return (
     <View style={styles.container}>
       {/* Header with Gradient */}
@@ -280,7 +450,7 @@ export default function StudentHomeScreen() {
               </Text>
             </View>
           </View>
-          <View>
+          <View style={styles.headerRight}>
             <TouchableOpacity
               style={styles.profileButton}
               onPress={() => router.push({
@@ -301,7 +471,7 @@ export default function StudentHomeScreen() {
                     styles.profilePlaceholder,
                     {
                       backgroundColor:
-                        student.student_sex === 'MALE' ? '#64B5F6' : '#F48FB1',
+                        student.student_sex === 'MALE' ? '#1B5E20' : '#4CAF50',
                     },
                   ]}
                 >
@@ -313,12 +483,26 @@ export default function StudentHomeScreen() {
                 </View>
               )}
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={handleLogout}
-            >
-              <Ionicons name="log-out-outline" size={18} color={COLORS.white} />
-            </TouchableOpacity>
+            
+            {/* Action Buttons Row */}
+            <View style={styles.actionButtons}>
+              {hasMultipleStudents && (
+                <TouchableOpacity
+                  style={styles.switchButton}
+                  onPress={handleSwitchStudent}
+                >
+                  <Ionicons name="swap-horizontal" size={16} color={COLORS.accent} />
+                  <Text style={styles.switchButtonText}>Switch</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.logoutButton}
+                onPress={handleLogout}
+              >
+                <Ionicons name="log-out-outline" size={16} color={COLORS.white} />
+                <Text style={styles.logoutButtonText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -329,8 +513,8 @@ export default function StudentHomeScreen() {
             { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
           ]}
         >
-          <StatCard icon="checkbox-outline" value={student.total_paid} label="Total Paid" />
-          <StatCard icon="book-outline" value={student.current_dues} label="Current Dues" />
+          <StatCard icon="cash-outline" value={`₹${student.total_paid}`} label="Total Paid" />
+          <StatCard icon="alert-circle-outline" value={`₹${student.current_dues}`} label="Current Dues" />
           <StatCard icon="trophy-outline" value="A+" label="Last Exam" />
         </Animated.View>
       </LinearGradient>
@@ -374,8 +558,8 @@ export default function StudentHomeScreen() {
               <Text style={styles.infoValue}>{student.student_type}</Text>
             </View>
             <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Father's Name</Text>
-              <Text style={styles.infoValue}>{student.student_father || 'N/A'}</Text>
+              <Text style={styles.infoLabel}>Gender</Text>
+              <Text style={styles.infoValue}>{student.student_sex}</Text>
             </View>
           </View>
         </View>
@@ -404,22 +588,34 @@ export default function StudentHomeScreen() {
         {/* Recent Notices */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Notices</Text>
-            <TouchableOpacity onPress={() => router.push('/student/noticeboard')}>
+            <Text style={styles.sectionTitle}>
+              Recent Notices {notices.length > 0 && `(${notices.length})`}
+            </Text>
+            <TouchableOpacity onPress={handleViewAllNotices}>
               <Text style={styles.viewAll}>View All</Text>
             </TouchableOpacity>
           </View>
-          <NoticeCard
-            title="Annual Day Celebration"
-            date="10 Jan 2024"
-            type="Event"
-          />
-          <NoticeCard
-            title="Winter Break Schedule"
-            date="08 Jan 2024"
-            type="Holiday"
-          />
+          
+          {notices && notices.length > 0 ? (
+            notices.slice(0, 3).map((notice) => (
+              <NoticeCard
+                key={notice.id}
+                notice={notice}
+                onDownload={handleDownloadAttachment}
+                isDownloading={downloadingNoticeId === notice.id}
+                formatDate={formatDate}
+                stripHtmlTags={stripHtmlTags}
+              />
+            ))
+          ) : (
+            <View style={styles.noNoticesContainer}>
+              <Ionicons name="notifications-off-outline" size={48} color={COLORS.lightGray} />
+              <Text style={styles.noNoticesText}>No notices available</Text>
+            </View>
+          )}
         </View>
+
+        <View style={{ height: 30 }} />
       </ScrollView>
     </View>
   );
@@ -479,29 +675,63 @@ function FeatureCard({ feature, index, onPress, fadeAnim }) {
   );
 }
 
-function NoticeCard({ title, date, type }) {
+function NoticeCard({ notice, onDownload, isDownloading, formatDate, stripHtmlTags }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasAttachment = notice.notice_attachment && notice.notice_attachment !== '';
+  const description = stripHtmlTags(notice.notice_details);
+  const shortDescription = description.length > 100 
+    ? description.substring(0, 100) + '...' 
+    : description;
+
   return (
-    <TouchableOpacity style={styles.noticeCard} activeOpacity={0.7}>
-      <View
-        style={[
-          styles.noticeIcon,
-          { backgroundColor: type === 'Event' ? '#E3F2FD' : '#FFF3E0' },
-        ]}
-      >
-        <Ionicons
-          name={type === 'Event' ? 'calendar' : 'sunny'}
-          size={24}
-          color={type === 'Event' ? '#2196F3' : '#FF9800'}
-        />
+    <View style={styles.noticeCard}>
+      <View style={styles.noticeHeader}>
+        <View style={styles.noticeIcon}>
+          <Ionicons name="megaphone" size={24} color={COLORS.secondary} />
+        </View>
+        <View style={styles.noticeContent}>
+          <Text style={styles.noticeTitle} numberOfLines={2}>
+            {notice.notice_title}
+          </Text>
+          <View style={styles.noticeDateContainer}>
+            <Ionicons name="calendar-outline" size={12} color={COLORS.gray} />
+            <Text style={styles.noticeDate}>{formatDate(notice.notice_date)}</Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.noticeContent}>
-        <Text style={styles.noticeTitle}>{title}</Text>
-        <Text style={styles.noticeDate}>{date}</Text>
-      </View>
-      <View style={styles.noticeBadge}>
-        <Text style={styles.noticeBadgeText}>{type}</Text>
-      </View>
-    </TouchableOpacity>
+
+      <Text style={styles.noticeDescription}>
+        {expanded ? description : shortDescription}
+      </Text>
+
+      {description.length > 100 && (
+        <TouchableOpacity onPress={() => setExpanded(!expanded)}>
+          <Text style={styles.readMoreText}>
+            {expanded ? 'Read Less' : 'Read More'}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {hasAttachment && (
+        <TouchableOpacity
+          style={styles.downloadButton}
+          onPress={() => onDownload(notice.id, notice.notice_attachment, notice.notice_title)}
+          disabled={isDownloading}
+        >
+          {isDownloading ? (
+            <>
+              <ActivityIndicator size="small" color={COLORS.white} />
+              <Text style={styles.downloadButtonText}>Downloading...</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="download-outline" size={18} color={COLORS.white} />
+              <Text style={styles.downloadButtonText}>Download Attachment</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
@@ -577,6 +807,9 @@ const styles = StyleSheet.create({
   headerLeft: {
     flex: 1,
   },
+  headerRight: {
+    alignItems: 'flex-end',
+  },
   welcomeText: {
     fontSize: 14,
     color: COLORS.white,
@@ -610,13 +843,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    
   },
   profileImage: {
     width: 60,
     height: 60,
     borderRadius: 30,
     borderWidth: 3,
-    borderColor: COLORS.white,
+    borderColor: COLORS.accent,
   },
   profilePlaceholder: {
     width: 60,
@@ -625,14 +859,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: COLORS.white,
+    borderColor: COLORS.accent,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    marginTop: 8,
+    gap: 8,
+  },
+  switchButton: {
+    backgroundColor: 'rgba(255, 193, 7, 0.3)',
+    borderRadius: 15,
+    padding: 6,
+    width: 26,
+    height: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   logoutButton: {
-    marginTop: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 15,
     padding: 6,
+    width: 26,
+    height: 26,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -647,7 +897,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: COLORS.white,
     marginTop: 4,
@@ -755,22 +1005,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   noticeCard: {
-    flexDirection: 'row',
     backgroundColor: COLORS.white,
     borderRadius: 15,
     padding: 15,
     marginBottom: 12,
-    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
+  noticeHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
   noticeIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    backgroundColor: '#E8F5E9',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -782,21 +1036,95 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: COLORS.primary,
-    marginBottom: 4,
+    marginBottom: 6,
+  },
+  noticeDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   noticeDate: {
     fontSize: 12,
     color: COLORS.gray,
   },
-  noticeBadge: {
-    backgroundColor: COLORS.accent,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+  noticeDescription: {
+    fontSize: 13,
+    color: COLORS.gray,
+    lineHeight: 20,
+    marginTop: 8,
   },
-  noticeBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
+  readMoreText: {
+    fontSize: 13,
+    color: COLORS.secondary,
+    fontWeight: '600',
+    marginTop: 8,
+  },
+  downloadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.secondary,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    marginTop: 12,
+    gap: 8,
+  },
+  downloadButtonText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  noNoticesContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noNoticesText: {
+    fontSize: 14,
+    color: COLORS.gray,
+    marginTop: 10,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    marginTop: 10,
+    gap: 8,
+  },
+  switchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  switchButtonText: {
     color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(244, 67, 54, 0.9)',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  logoutButtonText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
