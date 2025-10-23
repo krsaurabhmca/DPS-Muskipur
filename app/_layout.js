@@ -51,7 +51,7 @@ export default function RootLayout() {
       
     } catch (error) {
       console.error('Error checking auth status:', error);
-      router.replace('/');
+      router.replace('/index');
       setIsLoading(false);
     }
   };

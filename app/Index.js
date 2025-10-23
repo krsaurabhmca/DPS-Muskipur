@@ -307,8 +307,8 @@ export default function LoginScreen() {
                           setPhoneNumber(text.replace(/[^0-9]/g, ''));
                           setError('');
                         }}
-                        onFocus={() => setIsFocused(true)}
-                        onBlur={() => setIsFocused(false)}
+                       // onFocus={() => setIsFocused(true)}
+                       // onBlur={() => setIsFocused(false)}
                       />
                       {phoneNumber.length === 10 && !error && (
                         <Ionicons

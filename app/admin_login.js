@@ -362,8 +362,8 @@ export default function AdminLogin() {
                           setUsername(text);
                           setError('');
                         }}
-                        onFocus={() => setUsernameFocused(true)}
-                        onBlur={() => setUsernameFocused(false)}
+                        // onFocus={() => setUsernameFocused(true)}
+                        // onBlur={() => setUsernameFocused(false)}
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
@@ -405,8 +405,8 @@ export default function AdminLogin() {
                           setPassword(text);
                           setError('');
                         }}
-                        onFocus={() => setPasswordFocused(true)}
-                        onBlur={() => setPasswordFocused(false)}
+                        // onFocus={() => setPasswordFocused(true)}
+                        // onBlur={() => setPasswordFocused(false)}
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
