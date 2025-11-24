@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Proposal - BRIMS Hospitals Digital Platform</title>
+    <style>
+        @media print {
+            .page-break { page-break-before: always; }
+            body { margin: 0; }
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        
+        .a4-page {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            margin: 20px auto;
+            padding: 20mm;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            border-bottom: 4px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 20px;
+        }
+        
+        .company-info h1 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .company-info p {
+            font-size: 12px;
+            color: #666;
+            margin: 3px 0;
+        }
+        
+        .proposal-badge {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .proposal-badge h2 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .proposal-badge p {
+            font-size: 12px;
+        }
+        
+        .client-info {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .client-info h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 18px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: start;
+        }
+        
+        .info-item strong {
+            min-width: 80px;
+            color: #2c3e50;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            background: #34495e;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        
+        .intro-text {
+            text-align: justify;
+            margin-bottom: 20px;
+            line-height: 1.8;
+            color: #555;
+        }
+        
+        .scope-item {
+            background: #fff;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .scope-item h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .scope-item ul {
+            margin-left: 20px;
+            color: #666;
+        }
+        
+        .scope-item ul li {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .feature-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .feature-box h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+        
+        .feature-box ul {
+            margin-left: 18px;
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .tech-stack {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .tech-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .tech-item h4 {
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .tech-item p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        .timeline {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #3498db;
+        }
+        
+        .timeline-item {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: start;
+        }
+        
+        .timeline-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .timeline-marker {
+            background: #3498db;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        
+        .timeline-content h4 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .timeline-content p {
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .pricing-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .pricing-table th {
+            background: #34495e;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-size: 14px;
+        }
+        
+        .pricing-table td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            font-size: 14px;
+        }
+        
+        .pricing-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .pricing-table tr:last-child td {
+            font-weight: bold;
+            background: #ecf0f1;
+            font-size: 16px;
+        }
+        
+        .total-row {
+            background: #3498db !important;
+            color: white !important;
+        }
+        
+        .benefits {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .benefit-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+        
+        .benefit-item::before {
+            content: "✓";
+            background: #4caf50;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #34495e;
+        }
+        
+        .signature-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 50px;
+        }
+        
+        .signature-box {
+            text-align: center;
+        }
+        
+        .signature-line {
+            border-top: 2px solid #333;
+            margin-top: 50px;
+            padding-top: 10px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .signature-title {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .terms {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+        }
+        
+        .terms h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .terms ul {
+            margin-left: 20px;
+            color: #856404;
+            font-size: 13px;
+        }
+        
+        .terms ul li {
+            margin: 5px 0;
+        }
+        
+        @media print {
+            body { background: white; }
+            .a4-page { 
+                margin: 0; 
+                box-shadow: none;
+                padding: 15mm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Page 1 -->
+    <div class="a4-page">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-top">
+                <div class="company-info">
+                    <h1>OfferPlant Technologies Pvt. Ltd.</h1>
+                    <p>📍 2nd Floor Godrej Building, Salempur Chapra, Bihar 841301</p>
+                    <p>📧 ask@offerplant.com | 📱 +91 9431426660</p>
+                </div>
+                <div class="proposal-badge">
+                    <h2>PROPOSAL</h2>
+                    <p>Date: January 2025</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Client Information -->
+        <div class="client-info">
+            <h3>Prepared For</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <strong>Organization:</strong>
+                    <span>Dr. Birendra Ray Institute Of Medical Sciences (BRIMS Hospitals)</span>
+                </div>
+                <div class="info-item">
+                    <strong>Address:</strong>
+                    <span>Rambagh, Taraiya, Saran, Bihar</span>
+                </div>
+                <div class="info-item">
+                    <strong>Contact:</strong>
+                    <span>+91 9955564596</span>
+                </div>
+                <div class="info-item">
+                    <strong>Email:</strong>
+                    <span>info@brimshospitals.com</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Executive Summary -->
+        <div class="section">
+            <h3 class="section-title">📋 Executive Summary</h3>
+            <p class="intro-text">
+                Dear Dr. Birendra Ray Institute Of Medical Sciences,
+            </p>
+            <p class="intro-text">
+                OfferPlant Technologies Pvt. Ltd. is pleased to submit this proposal for the development of a comprehensive 
+                <strong>Healthcare Digital Platform</strong> including a Web Portal and Mobile Application. This solution will 
+                revolutionize the way BRIMS Hospitals connects with patients, manages doctor onboarding, and delivers healthcare services. 
+                Our platform will serve as a complete e-marketplace for healthcare services with features including hospital registration, 
+                service management, doctor profiles, ratings & reviews, comparisons, and patient membership programs.
+            </p>
+            <p class="intro-text">
+                This integrated platform will enhance patient engagement, streamline hospital operations, and position BRIMS Hospitals 
+                as a leader in digital healthcare services in Bihar.
+            </p>
+        </div>
+
+        <!-- Project Overview -->
+        <div class="section">
+            <h3 class="section-title">🎯 Project Overview</h3>
+            <div class="scope-item">
+                <h4>Platform Name: BRIMS Healthcare E-Marketplace</h4>
+                <p><strong>Deliverables:</strong></p>
+                <ul>
+                    <li>Responsive Web Portal (Desktop & Mobile Compatible)</li>
+                    <li>Android Mobile Application</li>
+                    <li>iOS Mobile Application</li>
+                    <li>Admin Dashboard & Management System</li>
+                    <li>Doctor Portal</li>
+                    <li>Patient Portal with Membership Features</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Key Features -->
+        <div class="section">
+            <h3 class="section-title">✨ Key Features & Functionality</h3>
+            
+            <div class="features-grid">
+                <div class="feature-box">
+                    <h4>🏥 Hospital Management</h4>
+                    <ul>
+                        <li>Hospital Registration & Profile</li>
+                        <li>Multiple Branch Management</li>
+                        <li>Services & Specialties Listing</li>
+                        <li>Infrastructure Details</li>
+                        <li>Photo & Video Gallery</li>
+                        <li>Operating Hours & Contact Info</li>
+                    </ul>
+                </div>
+
+                <div class="feature-box">
+                    <h4>👨‍⚕️ Doctor Onboarding</h4>
+                    <ul>
+                        <li>Easy Doctor Registration</li>
+                        <li>Profile Management</li>
+                        <li>Qualification & Experience</li>
+                        <li>Specialization Listing</li>
+                        <li>Availability & Schedule</li>
+                        <li>Consultation Fees</li>
+                    </ul>
+                </div>
+
+                <div class="feature-box">
+                    <h4>👥 Patient Features</h4>
+                    <ul>
+                        <li>User Registration & Login</li>
+                        <li>Membership Programs</li>
+                        <li>Appointment Booking</li>
+                        <li>Medical Records Access</li>
+                        <li>Prescription Management</li>
+                        <li>Health Package Subscription</li>
+                    </ul>
+                </div>
+
+                <div class="feature-box">
+                    <h4>⭐ Rating & Review System</h4>
+                    <ul>
+                        <li>Doctor Ratings & Reviews</li>
+                        <li>Hospital Service Reviews</li>
+                        <li>Patient Testimonials</li>
+                        <li>Verified Reviews Only</li>
+                        <li>Response Management</li>
+                        <li>Rating Analytics</li>
+                    </ul>
+                </div>
+
+                <div class="feature-box">
+                    <h4>🔍 Search & Compare</h4>
+                    <ul>
+                        <li>Advanced Search Filters</li>
+                        <li>Doctor Comparison</li>
+                        <li>Service Comparison</li>
+                        <li>Price Comparison</li>
+                        <li>Availability Check</li>
+                        <li>Location-based Search</li>
+                    </ul>
+                </div>
+
+                <div class="feature-box">
+                    <h4>🛒 E-Marketplace</h4>
+                    <ul>
+                        <li>Health Packages Listing</li>
+                        <li>Online Booking & Payment</li>
+                        <li>Service Catalog</li>
+                        <li>Offers & Discounts</li>
+                        <li>Order Management</li>
+                        <li>Invoice Generation</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page 2 -->
+    <div class="a4-page page-break">
+        <!-- Detailed Scope of Work -->
+        <div class="section">
+            <h3 class="section-title">📑 Detailed Scope of Work</h3>
+            
+            <div class="scope-item">
+                <h4>1. Web Portal Development</h4>
+                <ul>
+                    <li>Responsive design compatible with all devices (Desktop, Tablet, Mobile)</li>
+                    <li>Homepage with featured doctors, services, and hospitals</li>
+                    <li>Advanced search and filter functionality</li>
+                    <li>User registration and login system (Patients, Doctors, Hospitals)</li>
+                    <li>Multi-role dashboards (Admin, Doctor, Patient)</li>
+                    <li>Appointment booking and management system</li>
+                    <li>Payment gateway integration</li>
+                    <li>Real-time notifications</li>
+                    <li>Content Management System (CMS)</li>
+                    <li>SEO optimized pages</li>
+                </ul>
+            </div>
+
+            <div class="scope-item">
+                <h4>2. Mobile Application (Android & iOS)</h4>
+                <ul>
+                    <li>Native/Hybrid mobile app development</li>
+                    <li>User-friendly interface with smooth navigation</li>
+                    <li>Push notification system</li>
+                    <li>Offline data access for key features</li>
+                    <li>Location-based services using GPS</li>
+                    <li>In-app calling and messaging</li>
+                    <li>Digital wallet integration</li>
+                    <li>Appointment reminders</li>
+                    <li>Document upload and management</li>
+                    <li>App store deployment</li>
+                </ul>
+            </div>
+
+            <div class="scope-item">
+                <h4>3. Admin Dashboard</h4>
+                <ul>
+                    <li>Comprehensive analytics and reporting</li>
+                    <li>User management (Approve/Reject/Block)</li>
+                    <li>Hospital and doctor verification system</li>
+                    <li>Content moderation for reviews</li>
+                    <li>Service and package management</li>
+                    <li>Revenue tracking and financial reports</li>
+                    <li>System settings and configuration</li>
+                    <li>Email and SMS template management</li>
+                    <li>Promotional banner management</li>
+                    <li>Audit logs and activity tracking</li>
+                </ul>
+            </div>
+
+            <div class="scope-item">
+                <h4>4. Doctor Portal Features</h4>
+                <ul>
+                    <li>Personal profile management</li>
+                    <li>Appointment calendar and scheduling</li>
+                    <li>Patient history access</li>
+                    <li>Prescription writing module</li>
+                    <li>Earnings and payment tracking</li>
+                    <li>Review and rating management</li>
+                    <li>Availability update system</li>
+                    <li>Patient communication tools</li>
+                </ul>
+            </div>
+
+            <div class="scope-item">
+                <h4>5. Patient Membership System</h4>
+                <ul>
+                    <li>Multiple membership tiers (Basic, Premium, VIP)</li>
+                    <li>Exclusive benefits and discounts</li>
+                    <li>Priority booking for members</li>
+                    <li>Health tracking and reminders</li>
+                    <li>Family member addition</li>
+                    <li>Loyalty points program</li>
+                    <li>Membership renewal notifications</li>
+                    <li>Special health packages for members</li>
+                </ul>
+            </div>
+
+            <div class="scope-item">
+                <h4>6. E-Marketplace Functionality</h4>
+                <ul>
+                    <li>Service catalog with categories</li>
+                    <li>Shopping cart and checkout process</li>
+                    <li>Multiple payment options (UPI, Card, Net Banking, Wallet)</li>
+                    <li>Order tracking system</li>
+                    <li>Booking confirmation via email/SMS</li>
+                    <li>Refund and cancellation management</li>
+                    <li>Promotional codes and discount coupons</li>
+                    <li>Package bundling options</li>
+                </ul>
+            </div>
+
+            <div class="scope-item">
+                <h4>7. Rating & Review System</h4>
+                <ul>
+                    <li>5-star rating system</li>
+                    <li>Written reviews with photos</li>
+                    <li>Verified patient reviews only</li>
+                    <li>Review moderation and approval</li>
+                    <li>Doctor/Hospital response option</li>
+                    <li>Helpful/Not Helpful voting</li>
+                    <li>Review analytics and insights</li>
+                    <li>Featured reviews display</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Technology Stack -->
+        <div class="section">
+            <h3 class="section-title">💻 Technology Stack</h3>
+            
+            <div class="tech-stack">
+                <div class="tech-item">
+                    <h4>Frontend</h4>
+                    <p>React.js / Angular</p>
+                    <p>HTML5, CSS3, JavaScript</p>
+                    <p>Bootstrap / Material UI</p>
+                </div>
+                
+                <div class="tech-item">
+                    <h4>Backend</h4>
+                    <p>Node.js / PHP Laravel</p>
+                    <p>RESTful APIs</p>
+                    <p>Express.js Framework</p>
+                </div>
+                
+                <div class="tech-item">
+                    <h4>Database</h4>
+                    <p>MySQL / MongoDB</p>
+                    <p>Redis (Caching)</p>
+                    <p>Cloud Storage</p>
+                </div>
+                
+                <div class="tech-item">
+                    <h4>Mobile App</h4>
+                    <p>React Native / Flutter</p>
+                    <p>Android & iOS SDK</p>
+                    <p>Push Notifications</p>
+                </div>
+                
+                <div class="tech-item">
+                    <h4>Payment Gateway</h4>
+                    <p>Razorpay / PayU</p>
+                    <p>UPI Integration</p>
+                    <p>Secure Transactions</p>
+                </div>
+                
+                <div class="tech-item">
+                    <h4>Hosting & Security</h4>
+                    <p>AWS / Azure Cloud</p>
+                    <p>SSL Certificate</p>
+                    <p>Data Encryption</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page 3 -->
+    <div class="a4-page page-break">
+        <!-- Project Timeline -->
+        <div class="section">
+            <h3 class="section-title">📅 Project Timeline (3 Months)</h3>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-marker">1</div>
+                    <div class="timeline-content">
+                        <h4>Month 1: Planning & Design (Weeks 1-4)</h4>
+                        <p><strong>Week 1-2:</strong> Requirement gathering, wireframing, and system architecture design</p>
+                        <p><strong>Week 3-4:</strong> UI/UX design, database schema design, prototype development and client approval</p>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-marker">2</div>
+                    <div class="timeline-content">
+                        <h4>Month 2: Development Phase (Weeks 5-8)</h4>
+                        <p><strong>Week 5-6:</strong> Backend API development, database setup, admin dashboard development</p>
+                        <p><strong>Week 7-8:</strong> Frontend development, mobile app development, integration of all modules</p>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-marker">3</div>
+                    <div class="timeline-content">
+                        <h4>Month 3: Testing & Deployment (Weeks 9-12)</h4>
+                        <p><strong>Week 9-10:</strong> Quality assurance testing, bug fixing, security testing, performance optimization</p>
+                        <p><strong>Week 11:</strong> User acceptance testing (UAT), client feedback implementation</p>
+                        <p><strong>Week 12:</strong> Final deployment, app store submission, training and documentation handover</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Investment Details -->
+        <div class="section">
+            <h3 class="section-title">💰 Investment Details</h3>
+            
+            <table class="pricing-table">
+                <thead>
+                    <tr>
+                        <th>Item Description</th>
+                        <th>Details</th>
+                        <th style="text-align: right;">Amount (INR)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Web Portal Development</td>
+                        <td>Responsive website with all features</td>
+                        <td style="text-align: right;">₹35,000</td>
+                    </tr>
+                    <tr>
+                        <td>Mobile App Development</td>
+                        <td>Android & iOS applications</td>
+                        <td style="text-align: right;">₹25,000</td>
+                    </tr>
+                    <tr>
+                        <td>Admin Dashboard</td>
+                        <td>Complete management system</td>
+                        <td style="text-align: right;">₹8,000</td>
+                    </tr>
+                    <tr>
+                        <td>Payment Gateway Integration</td>
+                        <td>Razorpay/PayU integration</td>
+                        <td style="text-align: right;">₹3,000</td>
+                    </tr>
+                    <tr>
+                        <td>UI/UX Design</td>
+                        <td>Professional design and branding</td>
+                        <td style="text-align: right;">₹5,000</td>
+                    </tr>
+                    <tr>
+                        <td>Testing & QA</td>
+                        <td>Comprehensive testing</td>
+                        <td style="text-align: right;">₹2,000</td>
+                    </tr>
+                    <tr>
+                        <td>Deployment & Training</td>
+                        <td>Server setup, app store deployment, user training</td>
+                        <td style="text-align: right;">₹2,000</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td colspan="2" style="text-align: right;"><strong>TOTAL PROJECT COST</strong></td>
+                        <td style="text-align: right;"><strong>₹80,000</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Payment Schedule -->
+        <div class="section">
+            <h3 class="section-title">💳 Payment Schedule</h3>
+            
+            <table class="pricing-table">
+                <thead>
+                    <tr>
+                        <th>Milestone</th>
+                        <th>Deliverable</th>
+                        <th style="text-align: right;">Amount</th>
+                        <th style="text-align: right;">Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Project Initiation</td>
+                        <td>Contract signing & project kickoff</td>
+                        <td style="text-align: right;">₹24,000</td>
+                        <td style="text-align: right;">30%</td>
+                    </tr>
+                    <tr>
+                        <td>Design Approval</td>
+                        <td>UI/UX design & prototype approval</td>
+                        <td style="text-align: right;">₹16,000</td>
+                        <td style="text-align: right;">20%</td>
+                    </tr>
+                    <tr>
+                        <td>Development Completion</td>
+                        <td>Complete development & testing</td>
+                        <td style="text-align: right;">₹24,000</td>
+                        <td style="text-align: right;">30%</td>
+                    </tr>
+                    <tr>
+                        <td>Final Delivery</td>
+                        <td>Deployment, training & handover</td>
+                        <td style="text-align: right;">₹16,000</td>
+                        <td style="text-align: right;">20%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- What's Included -->
+        <div class="section">
+            <h3 class="section-title">✅ What's Included</h3>
+            
+            <div class="benefits">
+                <div class="benefit-item">Source Code Ownership</div>
+                <div class="benefit-item">3 Months Free Support</div>
+                <div class="benefit-item">Free Bug Fixes (30 days)</div>
+                <div class="benefit-item">Training & Documentation</div>
+                <div class="benefit-item">SSL Certificate Setup</div>
+                <div class="benefit-item">SEO Optimization</div>
+                <div class="benefit-item">Cloud Hosting Setup</div>
+                <div class="benefit-item">App Store Submission</div>
+                <div class="benefit-item">Email Configuration</div>
+                <div class="benefit-item">SMS Gateway Integration</div>
+                <div class="benefit-item">Admin Training Sessions</div>
+                <div class="benefit-item">Technical Documentation</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page 4 -->
+    <div class="a4-page page-break">
+        <!-- Additional Services -->
+        <div class="section">
+            <h3 class="section-title">🎁 Additional Services (Optional)</h3>
+            
+            <table class="pricing-table">
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Description</th>
+                        <th style="text-align: right;">Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Annual Maintenance</td>
+                        <td>12 months support, updates & maintenance</td>
+                        <td style="text-align: right;">₹15,000/year</td>
+                    </tr>
+                    <tr>
+                        <td>Digital Marketing</td>
+                        <td>SEO, Social Media, Google Ads setup</td>
+                        <td style="text-align: right;">₹10,000/month</td>
+                    </tr>
+                    <tr>
+                        <td>Content Creation</td>
+                        <td>Medical content writing & management</td>
+                        <td style="text-align: right;">₹8,000/month</td>
+                    </tr>
+                    <tr>
+                        <td>Video Consultation</td>
+                        <td>Telemedicine module integration</td>
+                        <td style="text-align: right;">₹25,000</td>
+                    </tr>
+                    <tr>
+                        <td>AI Chatbot</td>
+                        <td>24/7 automated customer support</td>
+                        <td style="text-align: right;">₹20,000</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Why Choose OfferPlant -->
+        <div class="section">
+            <h3 class="section-title">🌟 Why Choose OfferPlant Technologies?</h3>
+            
+            <div class="features-grid">
+                <div class="feature-box">
+                    <h4>🏆 Experience & Expertise</h4>
+                    <ul>
+                        <li>5+ years in software development</li>
+                        <li>Healthcare domain expertise</li>
+                        <li>Certified developers team</li>
+                        <li>50+ successful projects</li>
+                    </ul>
+                </div>
+
+                <div class="feature-box">
+                    <h4>💼 Professional Approach</h4>
+                    <ul>
+                        <li>Agile development methodology</li>
+                        <li>Regular progress updates</li>
+                        <li>Transparent communication</li>
+                        <li>On-time delivery guarantee</li>
+                    </ul>
+                </div>
+
+                <div class="feature-box">
+                    <h4>🔒 Security & Quality</h4>
+                    <ul>
+                        <li>HIPAA compliant solutions</li>
+                        <li>Data encryption standards</li>
+                        <li>Regular security audits</li>
+                        <li>Quality assurance testing</li>
+                    </ul>
+                </div>
+
+                <div class="feature-box">
+                    <h4>🚀 Post-Launch Support</h4>
+                    <ul>
+                        <li>24/7 technical support</li>
+                        <li>Regular updates & upgrades</li>
+                        <li>Performance monitoring</li>
+                        <li>Scalability assurance</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terms & Conditions -->
+        <div class="section">
+            <h3 class="section-title">📜 Terms & Conditions</h3>
+            
+            <div class="terms">
+                <h4>Important Points:</h4>
+                <ul>
+                    <li>Project timeline is subject to timely feedback and approvals from client</li>
+                    <li>Content, images, and hospital data to be provided by BRIMS Hospitals</li>
+                    <li>Domain and hosting charges are not included in the quoted price</li>
+                    <li>Payment gateway transaction charges (2-3%) will be borne by the client</li>
+                    <li>Any additional features beyond the scope will be charged separately</li>
+                    <li>Source code will be handed over after final payment clearance</li>
+                    <li>Annual maintenance contract recommended after free support period</li>
+                    <li>This proposal is valid for 30 days from the date of submission</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Next Steps -->
+        <div class="section">
+            <h3 class="section-title">👣 Next Steps</h3>
+            
+            <div class="scope-item">
+                <h4>To proceed with this project:</h4>
+                <ul>
+                    <li><strong>Step 1:</strong> Review and approve this proposal</li>
+                    <li><strong>Step 2:</strong> Sign the service agreement</li>
+                    <li><strong>Step 3:</strong> Make the initial payment (30%)</li>
+                    <li><strong>Step 4:</strong> Project kickoff meeting and planning session</li>
+                    <li><strong>Step 5:</strong> Begin development as per timeline</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="section">
+            <h3 class="section-title">📞 Contact Information</h3>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <strong>Company:</strong>
+                    <span>OfferPlant Technologies Pvt. Ltd.</span>
+                </div>
+                <div class="info-item">
+                    <strong>Address:</strong>
+                    <span>2nd Floor Godrej Building, Salempur Chapra, Bihar 841301</span>
+                </div>
+                <div class="info-item">
+                    <strong>Email:</strong>
+                    <span>ask@offerplant.com</span>
+                </div>
+                <div class="info-item">
+                    <strong>Phone:</strong>
+                    <span>+91 9431426660</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Closing Statement -->
+        <div class="section">
+            <p class="intro-text">
+                We are excited about the opportunity to work with BRIMS Hospitals and contribute to the digital transformation 
+                of healthcare services in Bihar. Our team is committed to delivering a world-class platform that will enhance 
+                patient experience and operational efficiency.
+            </p>
+            <p class="intro-text">
+                We look forward to your positive response and the opportunity to discuss this proposal in detail.
+            </p>
+        </div>
+
+        <!-- Signature Section -->
+        <div class="footer">
+            <div class="signature-section">
+                <div class="signature-box">
+                    <div class="signature-line">
+                        Authorized Signatory
+                    </div>
+                    <div class="signature-title">OfferPlant Technologies Pvt. Ltd.</div>
+                </div>
+                
+                <div class="signature-box">
+                    <div class="signature-line">
+                        Accepted By
+                    </div>
+                    <div class="signature-title">BRIMS Hospitals</div>
+                </div>
+            </div>
+            
+            <p style="text-align: center; margin-top: 30px; font-size: 12px; color: #666;">
+                This proposal is confidential and intended solely for the use of BRIMS Hospitals<br>
+                © 2025 OfferPlant Technologies Pvt. Ltd. All rights reserved.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Optional: Add print functionality
+        function printProposal() {
+            window.print();
+        }
+        
+        // You can add a print button if needed
+        // <button onclick="printProposal()">Print Proposal</button>
+    </script>
+</body>
+</html>
