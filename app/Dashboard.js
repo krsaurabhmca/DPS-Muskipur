@@ -22,12 +22,15 @@ const { width } = Dimensions.get("window");
 export default function DashboardScreen({ navigation, route }) {
   const [greeting, setGreeting] = useState("");
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("receipts"); // 'receipts' or 'students'
   const [dashboardData, setDashboardData] = useState({
     student: 0,
     absent: 0,
     collection: "0.00",
     full_name: "",
-    user_type: ""
+    user_type: "",
+    recent_receipts: [],
+    recent_students: []
   });
 
   useEffect(() => {
@@ -91,8 +94,7 @@ export default function DashboardScreen({ navigation, route }) {
               ]);
               
               // Navigate to login screen
-              //router.replace('/index');
-              router.replace('/admin_login'); // or '/login'
+              router.replace('/admin_login');
             } catch (error) {
               console.error('Error during logout:', error);
               Alert.alert('Error', 'Failed to logout. Please try again.');
@@ -102,6 +104,64 @@ export default function DashboardScreen({ navigation, route }) {
         }
       ]
     );
+  };
+
+  // Format date to readable format
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return "Today";
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return "Yesterday";
+    } else {
+      return date.toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "short",
+        year: "numeric"
+      });
+    }
+  };
+
+  // Format datetime to readable format
+  const formatDateTime = (dateTimeString) => {
+    const date = new Date(dateTimeString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return "Yesterday";
+    } else {
+      return date.toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "short"
+      });
+    }
+  };
+
+  // Format currency with ₹ symbol
+  const formatCurrency = (amount) => {
+    const num = parseFloat(amount);
+    if (num >= 100000) {
+      return `₹${(num / 100000).toFixed(1)}L`;
+    } else if (num >= 1000) {
+      return `₹${(num / 1000).toFixed(1)}K`;
+    }
+    return `₹${num.toFixed(0)}`;
+  };
+
+  const formatFullCurrency = (amount) => {
+    return `₹${parseFloat(amount).toLocaleString('en-IN')}`;
   };
 
   const menuItems = [
@@ -178,10 +238,57 @@ export default function DashboardScreen({ navigation, route }) {
     console.log(`Navigating to ${route}`);
   };
 
-  // Format currency with ₹ symbol
-  const formatCurrency = (amount) => {
-    return `₹${amount}`;
-  };
+  // Render receipt activity item
+  const renderReceiptItem = (receipt, index) => (
+    <View key={`receipt-${receipt.id}`} style={styles.activityItem}>
+      <View
+        style={[
+          styles.activityIconContainer,
+          { backgroundColor: "#38b000" },
+        ]}
+      >
+        <FontAwesome5 name="rupee-sign" size={16} color="#ffffff" />
+      </View>
+      <View style={styles.activityContent}>
+        <Text style={styles.activityTitle}>Fee Collected</Text>
+        <Text style={styles.activityDescription}>
+          Student ID: {receipt.student_id} - {formatFullCurrency(receipt.paid_amount)}
+        </Text>
+      </View>
+      <View style={styles.activityTimeContainer}>
+        <Text style={styles.activityTime}>{formatDate(receipt.paid_date)}</Text>
+        <View style={styles.receiptBadge}>
+          <Text style={styles.receiptBadgeText}>#{receipt.id}</Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  // Render student activity item
+  const renderStudentItem = (student, index) => (
+    <View key={`student-${student.id}`} style={styles.activityItem}>
+      <View
+        style={[
+          styles.activityIconContainer,
+          { backgroundColor: "#4361ee" },
+        ]}
+      >
+        <FontAwesome5 name="user-plus" size={16} color="#ffffff" />
+      </View>
+      <View style={styles.activityContent}>
+        <Text style={styles.activityTitle}>New Student Added</Text>
+        <Text style={styles.activityDescription}>
+          {student.student_name || `Student ID: ${student.id}`}
+        </Text>
+      </View>
+      <View style={styles.activityTimeContainer}>
+        <Text style={styles.activityTime}>{formatDateTime(student.created_at)}</Text>
+        <View style={[styles.receiptBadge, { backgroundColor: '#4361ee20' }]}>
+          <Text style={[styles.receiptBadgeText, { color: '#4361ee' }]}>#{student.id}</Text>
+        </View>
+      </View>
+    </View>
+  );
 
   if (loading) {
     return (
@@ -320,73 +427,102 @@ export default function DashboardScreen({ navigation, route }) {
             ))}
           </View>
 
+          {/* Updated Recent Activity Section */}
           <View style={styles.recentActivityContainer}>
             <View style={styles.recentActivityHeader}>
               <Text style={styles.recentActivityTitle}>Recent Activity</Text>
-              <TouchableOpacity>
-                <Text style={styles.viewAllText}>View All</Text>
+              <TouchableOpacity onPress={fetchDashboardData}>
+                <FontAwesome5 name="sync-alt" size={14} color="#3498db" />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.activityList}>
-              <View style={styles.activityItem}>
-                <View
+            {/* Tab Buttons */}
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.tabButton,
+                  activeTab === "receipts" && styles.activeTabButton,
+                ]}
+                onPress={() => setActiveTab("receipts")}
+              >
+                <FontAwesome5 
+                  name="rupee-sign" 
+                  size={12} 
+                  color={activeTab === "receipts" ? "#ffffff" : "#38b000"} 
+                />
+                <Text
                   style={[
-                    styles.activityIconContainer,
-                    { backgroundColor: "#4361ee" },
+                    styles.tabButtonText,
+                    activeTab === "receipts" && styles.activeTabButtonText,
                   ]}
                 >
-                  <FontAwesome5 name="rupee-sign" size={16} color="#ffffff" />
-                </View>
-                <View style={styles.activityContent}>
-                  <Text style={styles.activityTitle}>Fee Collected</Text>
-                  <Text style={styles.activityDescription}>
-                    Rahul Kumar - Class 8A - ₹3,500
-                  </Text>
-                </View>
-                <Text style={styles.activityTime}>10:15 AM</Text>
-              </View>
-
-              <View style={styles.activityItem}>
-                <View
+                  Fee Receipts ({dashboardData.recent_receipts?.length || 0})
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.tabButton,
+                  activeTab === "students" && styles.activeTabButton,
+                  activeTab === "students" && { backgroundColor: "#4361ee" },
+                ]}
+                onPress={() => setActiveTab("students")}
+              >
+                <FontAwesome5 
+                  name="user-plus" 
+                  size={12} 
+                  color={activeTab === "students" ? "#ffffff" : "#4361ee"} 
+                />
+                <Text
                   style={[
-                    styles.activityIconContainer,
-                    { backgroundColor: "#3a86ff" },
+                    styles.tabButtonText,
+                    activeTab === "students" && styles.activeTabButtonText,
                   ]}
                 >
-                  <FontAwesome5
-                    name="clipboard-check"
-                    size={16}
-                    color="#ffffff"
-                  />
-                </View>
-                <View style={styles.activityContent}>
-                  <Text style={styles.activityTitle}>Attendance Marked</Text>
-                  <Text style={styles.activityDescription}>
-                    Class 10B - 32 Present, 3 Absent
-                  </Text>
-                </View>
-                <Text style={styles.activityTime}>09:30 AM</Text>
-              </View>
-
-              <View style={styles.activityItem}>
-                <View
-                  style={[
-                    styles.activityIconContainer,
-                    { backgroundColor: "#7209b7" },
-                  ]}
-                >
-                  <FontAwesome5 name="book" size={16} color="#ffffff" />
-                </View>
-                <View style={styles.activityContent}>
-                  <Text style={styles.activityTitle}>Homework Assigned</Text>
-                  <Text style={styles.activityDescription}>
-                    Mathematics - Class 9A
-                  </Text>
-                </View>
-                <Text style={styles.activityTime}>Yesterday</Text>
-              </View>
+                  New Students ({dashboardData.recent_students?.length || 0})
+                </Text>
+              </TouchableOpacity>
             </View>
+
+            {/* Activity List */}
+            <View style={styles.activityList}>
+              {activeTab === "receipts" ? (
+                dashboardData.recent_receipts && dashboardData.recent_receipts.length > 0 ? (
+                  dashboardData.recent_receipts.map((receipt, index) => 
+                    renderReceiptItem(receipt, index)
+                  )
+                ) : (
+                  <View style={styles.emptyState}>
+                    <FontAwesome5 name="receipt" size={40} color="#ddd" />
+                    <Text style={styles.emptyStateText}>No recent receipts</Text>
+                  </View>
+                )
+              ) : (
+                dashboardData.recent_students && dashboardData.recent_students.length > 0 ? (
+                  dashboardData.recent_students.map((student, index) => 
+                    renderStudentItem(student, index)
+                  )
+                ) : (
+                  <View style={styles.emptyState}>
+                    <FontAwesome5 name="users" size={40} color="#ddd" />
+                    <Text style={styles.emptyStateText}>No recent students</Text>
+                  </View>
+                )
+              )}
+            </View>
+
+            {/* Summary Footer */}
+            {activeTab === "receipts" && dashboardData.recent_receipts?.length > 0 && (
+              <View style={styles.summaryFooter}>
+                <Text style={styles.summaryText}>
+                  Total from recent: {formatFullCurrency(
+                    dashboardData.recent_receipts.reduce(
+                      (sum, receipt) => sum + parseFloat(receipt.paid_amount), 
+                      0
+                    )
+                  )}
+                </Text>
+              </View>
+            )}
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -410,7 +546,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   header: {
-    height: 140, // Increased height to accommodate logout button
+    height: 140,
     overflow: "hidden",
   },
   headerGradient: {
@@ -418,7 +554,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    height: 140, // Match the header height
+    height: 140,
   },
   headerContent: {
     flexDirection: "row",
@@ -499,7 +635,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 20,
-    paddingBottom: 30,  // Reduced padding since bottom bar is removed
+    paddingBottom: 30,
   },
   dashboardHeader: {
     marginBottom: 20,
@@ -608,9 +744,33 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#2c3e50",
   },
-  viewAllText: {
-    fontSize: 14,
-    color: "#3498db",
+  // Tab Styles
+  tabContainer: {
+    flexDirection: "row",
+    marginBottom: 16,
+    gap: 10,
+  },
+  tabButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: "#f0f0f0",
+    gap: 6,
+  },
+  activeTabButton: {
+    backgroundColor: "#38b000",
+  },
+  tabButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#666",
+  },
+  activeTabButtonText: {
+    color: "#ffffff",
   },
   activityList: {
     gap: 12,
@@ -618,11 +778,14 @@ const styles = StyleSheet.create({
   activityItem: {
     flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
   },
   activityIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -631,7 +794,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   activityTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
     color: "#2c3e50",
     marginBottom: 2,
@@ -640,8 +803,44 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#7f8c8d",
   },
+  activityTimeContainer: {
+    alignItems: "flex-end",
+  },
   activityTime: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#95a5a6",
+    marginBottom: 4,
+  },
+  receiptBadge: {
+    backgroundColor: "#38b00020",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  receiptBadgeText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#38b000",
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 30,
+  },
+  emptyStateText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: "#999",
+  },
+  summaryFooter: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+    alignItems: "center",
+  },
+  summaryText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#38b000",
   },
 });

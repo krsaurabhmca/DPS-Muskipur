@@ -178,7 +178,7 @@ export default function NoticeBoardScreen() {
 
   const handleAttachment = (url) => {
     if (url) {
-      Linking.openURL(`https://dpsmushkipur.com/bine/uploads/${url}`);
+      Linking.openURL(`https://dpsmushkipur.com/bine/homework/${url}`);
     }
   };
 

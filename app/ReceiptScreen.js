@@ -18,7 +18,6 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-//import QRCode from 'react-native-qrcode-svg';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 
 export default function ReceiptScreen() {
@@ -31,14 +30,14 @@ export default function ReceiptScreen() {
   // Get receipt ID from params
   const receiptId = params.receipt_no || params.receipt_id || "";
 
-  // School details - in a real app, these would come from your app config
+  // School details
   const schoolDetails = {
     name: "Delhi Public School, Mushkipur",
     address: "Mushkipur, Muzaffarpur, Bihar - 842002",
     phone: "+91 9876543210",
     email: "info@dpsmushkipur.com",
     website: "www.dpsmushkipur.com",
-    logo: require("./assets/logo.png") // Update with your school logo path
+    logo: require("./assets/logo.png")
   };
 
   useEffect(() => {
@@ -74,287 +73,694 @@ export default function ReceiptScreen() {
     }
   };
 
+  // ✅ FIXED: Complete HTML generation with proper fee table showing description and amount
   const generateReceiptHTML = () => {
     if (!receiptData) return '';
 
     // Format payment date
-    const formattedDate = new Date(receiptData.payment_date).toLocaleDateString('en-US', {
+    const formattedDate = new Date(receiptData.payment_date).toLocaleDateString('en-IN', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
 
-    // Determine paid amount (use total if paid_amount is null)
-    const paidAmount = receiptData.paid_amount !== null ? receiptData.paid_amount : receiptData.total;
+    // Determine paid amount
+    const paidAmount = receiptData.paid_amount !== null 
+      ? parseFloat(receiptData.paid_amount) 
+      : parseFloat(receiptData.total);
     
     // Split months if there are multiple
-    const paidMonths = receiptData.paid_month.split(',').map(month => month.trim());
-    
-    // Create QR code data
-    //const qrData = `Receipt:${receiptData.receipt_id},Student:${receiptData.admission_no},Amount:${paidAmount}`;
+    const paidMonths = receiptData.paid_month 
+      ? receiptData.paid_month.split(',').map(month => month.trim()) 
+      : ['N/A'];
+    const monthsDisplay = paidMonths.join(', ');
+
+    // Calculate values safely
+    const tutionFee = receiptData.fee_details?.tution_fee ? parseFloat(receiptData.fee_details.tution_fee) : 0;
+    const transportFee = receiptData.fee_details?.transport_fee ? parseFloat(receiptData.fee_details.transport_fee) : 0;
+    const totalAmount = parseFloat(receiptData.total) || 0;
+    const discount = parseFloat(receiptData.discount) || 0;
+    const miscFee = parseFloat(receiptData.misc_fee) || 0;
+    const currentDues = parseFloat(receiptData.current_dues) || 0;
+
+    // Format currency
+    const formatCurrency = (amount) => {
+      return '₹ ' + amount.toLocaleString('en-IN', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      });
+    };
+
+    // Build fee rows dynamically
+    let feeRows = '';
+    let serialNo = 1;
+
+    if (tutionFee > 0) {
+      feeRows += `
+        <tr>
+          <td class="serial-no">${serialNo++}</td>
+          <td class="description">
+            <div class="fee-name">Tuition Fee</div>
+            <div class="fee-period">Period: ${monthsDisplay}</div>
+          </td>
+          <td class="amount">${formatCurrency(tutionFee)}</td>
+        </tr>
+      `;
+    }
+
+    if (transportFee > 0) {
+      feeRows += `
+        <tr>
+          <td class="serial-no">${serialNo++}</td>
+          <td class="description">
+            <div class="fee-name">Transport Fee</div>
+            <div class="fee-period">Period: ${monthsDisplay}</div>
+          </td>
+          <td class="amount">${formatCurrency(transportFee)}</td>
+        </tr>
+      `;
+    }
+
+    if (miscFee > 0) {
+      feeRows += `
+        <tr>
+          <td class="serial-no">${serialNo++}</td>
+          <td class="description">
+            <div class="fee-name">Miscellaneous Fee</div>
+            <div class="fee-period">Additional charges</div>
+          </td>
+          <td class="amount">${formatCurrency(miscFee)}</td>
+        </tr>
+      `;
+    }
+
+    // If no fees, show a default row
+    if (feeRows === '') {
+      feeRows = `
+        <tr>
+          <td class="serial-no">1</td>
+          <td class="description">
+            <div class="fee-name">School Fee</div>
+            <div class="fee-period">Period: ${monthsDisplay}</div>
+          </td>
+          <td class="amount">${formatCurrency(totalAmount)}</td>
+        </tr>
+      `;
+    }
 
     return `
-      <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            color: #333;
-          }
-          .receipt {
-            max-width: 800px;
-            margin: 0 auto;
-            border: 2px solid #1e3c72;
-            border-radius: 10px;
-            overflow: hidden;
-          }
-          .header {
-            background: linear-gradient(to right, #1e3c72, #2a5298);
-            color: white;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-          }
-          .school-info {
-            flex: 1;
-          }
-          .school-name {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 5px;
-          }
-          .school-details {
-            font-size: 12px;
-            margin-top: 5px;
-          }
-          .receipt-title {
-            font-size: 22px;
-            font-weight: bold;
-            text-align: center;
-            margin: 15px 0;
-            color: #1e3c72;
-          }
-          .receipt-no {
-            text-align: right;
-            font-size: 14px;
-            margin-bottom: 5px;
-          }
-          .content {
-            padding: 20px;
-          }
-          .section {
-            margin-bottom: 20px;
-          }
-          .section-title {
-            font-size: 16px;
-            font-weight: bold;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
-            margin-bottom: 10px;
-            color: #1e3c72;
-          }
-          .info-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-          }
-          .info-label {
-            font-weight: bold;
-            color: #666;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-          }
-          table, th, td {
-            border: 1px solid #ddd;
-          }
-          th {
-            background-color: #f2f2f2;
-            padding: 8px;
-            text-align: left;
-          }
-          td {
-            padding: 8px;
-          }
-          .payment-summary {
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 20px;
-          }
-          .total-row {
-            font-weight: bold;
-            font-size: 16px;
-            color: #1e3c72;
-          }
-          .footer {
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 1px dashed #ddd;
-            font-size: 12px;
-            color: #666;
-          }
-          .signature {
-            margin-top: 50px;
-            display: flex;
-            justify-content: space-between;
-          }
-          .signature-box {
-            text-align: center;
-            width: 40%;
-          }
-          .signature-line {
-            border-top: 1px solid #333;
-            margin-bottom: 5px;
-          }
-          .watermark {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 100px;
-            color: rgba(200, 200, 200, 0.1);
-            z-index: -1;
-          }
-          .qr-container {
-            text-align: center;
-            margin-top: 20px;
-          }
-          .dues-notice {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #fff3e0;
-            border-radius: 5px;
-            border-left: 3px solid #f39c12;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="receipt">
-          <div class="header">
-            <div class="school-info">
-              <div class="school-name">${schoolDetails.name}</div>
-              <div class="school-details">${schoolDetails.address}</div>
-              <div class="school-details">Phone: ${schoolDetails.phone} | Email: ${schoolDetails.email}</div>
-            </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fee Receipt - ${receiptData.receipt_id}</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 15px;
+      color: #333;
+      background-color: #f5f5f5;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    
+    .receipt-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border: 2px solid #1e3c72;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    
+    /* Watermark */
+    .watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      font-size: 80px;
+      font-weight: bold;
+      color: rgba(76, 175, 80, 0.06);
+      z-index: 0;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #1e3c72 100%);
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .school-logo {
+      width: 60px;
+      height: 60px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: bold;
+      color: #1e3c72;
+      flex-shrink: 0;
+      border: 2px solid #fff;
+    }
+    
+    .school-info {
+      flex: 1;
+    }
+    
+    .school-name {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    
+    .school-details {
+      font-size: 11px;
+      opacity: 0.9;
+      line-height: 1.5;
+    }
+    
+    /* Receipt Title */
+    .receipt-title-section {
+      text-align: center;
+      padding: 15px;
+      border-bottom: 2px dashed #e0e0e0;
+      background: #fafafa;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .receipt-title {
+      font-size: 24px;
+      font-weight: bold;
+      color: #1e3c72;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    
+    .receipt-meta {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      font-size: 13px;
+      color: #555;
+    }
+    
+    .receipt-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .receipt-meta-item strong {
+      color: #1e3c72;
+    }
+    
+    /* Content */
+    .content {
+      padding: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    
+    /* Section */
+    .section {
+      margin-bottom: 20px;
+    }
+    
+    .section-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #1e3c72;
+      background: linear-gradient(90deg, #e8eef7 0%, transparent 100%);
+      padding: 8px 12px;
+      border-left: 4px solid #1e3c72;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    /* Student Info Grid */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 20px;
+      background: #f8f9fa;
+      padding: 12px 15px;
+      border-radius: 6px;
+      border: 1px solid #e0e0e0;
+    }
+    
+    .info-item {
+      display: flex;
+      padding: 4px 0;
+    }
+    
+    .info-label {
+      font-weight: 600;
+      color: #666;
+      min-width: 110px;
+      font-size: 12px;
+    }
+    
+    .info-value {
+      color: #333;
+      font-weight: 500;
+      font-size: 12px;
+    }
+    
+    /* ✅ FIXED: Fee Table with proper Description and Amount columns */
+    .fee-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0;
+      background: white;
+      border: 1px solid #1e3c72;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    
+    .fee-table thead {
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+    }
+    
+    .fee-table th {
+      padding: 12px 15px;
+      text-align: left;
+      color: white;
+      font-weight: 600;
+      font-size: 13px;
+      border-bottom: 2px solid #1e3c72;
+    }
+    
+    .fee-table th.serial-no {
+      width: 60px;
+      text-align: center;
+    }
+    
+    .fee-table th.description {
+      width: auto;
+    }
+    
+    .fee-table th.amount {
+      width: 150px;
+      text-align: right;
+    }
+    
+    .fee-table td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #e0e0e0;
+      vertical-align: top;
+    }
+    
+    .fee-table td.serial-no {
+      text-align: center;
+      font-weight: 600;
+      color: #1e3c72;
+    }
+    
+    .fee-table td.description {
+      text-align: left;
+    }
+    
+    .fee-table td.description .fee-name {
+      font-weight: 600;
+      color: #333;
+      font-size: 13px;
+      margin-bottom: 3px;
+    }
+    
+    .fee-table td.description .fee-period {
+      font-size: 11px;
+      color: #888;
+      font-style: italic;
+    }
+    
+    .fee-table td.amount {
+      text-align: right;
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #333;
+    }
+    
+    .fee-table tbody tr:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+    
+    .fee-table tbody tr:hover {
+      background-color: #e8f4e8;
+    }
+    
+    .fee-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    
+    /* Summary Section */
+    .summary-container {
+      margin-top: 15px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 15px;
+      border-bottom: 1px solid #e0e0e0;
+      background: #fafafa;
+    }
+    
+    .summary-row:last-child {
+      border-bottom: none;
+    }
+    
+    .summary-row.subtotal {
+      background: #f0f0f0;
+    }
+    
+    .summary-row.discount {
+      background: #fff5f5;
+    }
+    
+    .summary-row.discount .summary-value {
+      color: #e74c3c;
+    }
+    
+    .summary-row.total-paid {
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: white;
+      padding: 15px;
+    }
+    
+    .summary-row.total-paid .summary-label,
+    .summary-row.total-paid .summary-value {
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    
+    .summary-label {
+      font-weight: 500;
+      color: #555;
+      font-size: 13px;
+    }
+    
+    .summary-value {
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      color: #333;
+    }
+    
+    /* Dues Warning */
+    .dues-warning {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(90deg, #fff3e0, #ffe0b2);
+      border: 1px solid #ffb74d;
+      border-left: 4px solid #f57c00;
+      border-radius: 6px;
+      padding: 12px 15px;
+      margin-top: 15px;
+    }
+    
+    .dues-label {
+      font-weight: 600;
+      color: #e65100;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .dues-amount {
+      font-size: 16px;
+      font-weight: bold;
+      color: #e65100;
+      font-family: 'Courier New', monospace;
+    }
+    
+    /* Remarks */
+    .remarks-box {
+      background: #e3f2fd;
+      border-left: 4px solid #2196f3;
+      padding: 12px 15px;
+      border-radius: 0 6px 6px 0;
+      margin-top: 15px;
+    }
+    
+    .remarks-label {
+      font-weight: 600;
+      color: #1565c0;
+      margin-bottom: 5px;
+      font-size: 12px;
+    }
+    
+    .remarks-text {
+      color: #333;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    
+    /* Payment Mode Badge */
+    .payment-mode {
+      display: inline-block;
+      background: #e8f5e9;
+      color: #2e7d32;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 10px;
+    }
+    
+    /* Signature Section */
+    .signature-section {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px dashed #ccc;
+    }
+    
+    .signature-box {
+      text-align: center;
+      width: 180px;
+    }
+    
+    .signature-line {
+      border-top: 1px solid #333;
+      margin-bottom: 8px;
+    }
+    
+    .signature-title {
+      font-weight: 600;
+      color: #333;
+      font-size: 12px;
+    }
+    
+    .signature-subtitle {
+      color: #666;
+      font-size: 11px;
+    }
+    
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 12px;
+      background: #f5f5f5;
+      border-top: 1px solid #e0e0e0;
+      font-size: 10px;
+      color: #888;
+    }
+    
+    .footer p {
+      margin: 2px 0;
+    }
+    
+    .footer .thank-you {
+      font-weight: bold;
+      color: #1e3c72;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    
+    /* Print Styles */
+    @media print {
+      body {
+        padding: 0;
+        background: white;
+      }
+      
+      .receipt-container {
+        box-shadow: none;
+        border: 2px solid #1e3c72;
+      }
+      
+      .fee-table tbody tr:hover {
+        background-color: inherit;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt-container">
+    <!-- Watermark -->
+    <div class="watermark">PAID</div>
+    
+    <!-- Header -->
+    <div class="header">
+      <div class="school-logo">DPS</div>
+      <div class="school-info">
+        <div class="school-name">${schoolDetails.name}</div>
+        <div class="school-details">
+          ${schoolDetails.address}<br>
+          Phone: ${schoolDetails.phone} | Email: ${schoolDetails.email}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Receipt Title -->
+    <div class="receipt-title-section">
+      <div class="receipt-title">FEE RECEIPT</div>
+      <div class="receipt-meta">
+        <div class="receipt-meta-item">
+          <strong>Receipt No:</strong> ${receiptData.receipt_id}
+        </div>
+        <div class="receipt-meta-item">
+          <strong>Date:</strong> ${formattedDate}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Content -->
+    <div class="content">
+      <!-- Student Information -->
+      <div class="section">
+        <div class="section-title">📋 Student Information</div>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Student Name:</span>
+            <span class="info-value">${receiptData.student_name || 'N/A'}</span>
           </div>
-          
-          <div class="content">
-            <div class="receipt-title">FEE RECEIPT</div>
-            <div class="receipt-no">Receipt No: ${receiptData.receipt_id}</div>
-            <div class="receipt-no">Date: ${formattedDate}</div>
-            
-            <div class="section">
-              <div class="section-title">Student Information</div>
-              <div class="info-row">
-                <span class="info-label">Name:</span>
-                <span>${receiptData.student_name}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">Admission No:</span>
-                <span>${receiptData.admission_no}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">Class:</span>
-                <span>${receiptData.student_class}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">Father's Name:</span>
-                <span>${receiptData.father_name}</span>
-              </div>
-            </div>
-            
-            <div class="section">
-              <div class="section-title">Fee Details</div>
-              <table>
-                <tr>
-                  <th>Description</th>
-                  <th>Amount (₹)</th>
-                </tr>
-                <tr>
-                  <td>${paidMonths.join(', ')} - Tuition Fee</td>
-                  <td>₹ ${parseFloat(receiptData.fee_details.tution_fee).toLocaleString()}</td>
-                </tr>
-                ${receiptData.fee_details.transport_fee ? `
-                <tr>
-                  <td>${paidMonths.join(', ')} - Transport Fee</td>
-                  <td>₹ ${parseFloat(receiptData.fee_details.transport_fee).toLocaleString()}</td>
-                </tr>
-                ` : ''}
-              </table>
-              
-              <div class="payment-summary">
-                <div class="info-row">
-                  <span class="info-label">Total Amount:</span>
-                  <span>₹ ${parseFloat(receiptData.total).toLocaleString()}</span>
-                </div>
-                ${parseFloat(receiptData.discount) > 0 ? `
-                <div class="info-row">
-                  <span class="info-label">Discount:</span>
-                  <span>₹ ${parseFloat(receiptData.discount).toLocaleString()}</span>
-                </div>
-                ` : ''}
-                ${parseFloat(receiptData.misc_fee) > 0 ? `
-                <div class="info-row">
-                  <span class="info-label">Misc Fee:</span>
-                  <span>₹ ${parseFloat(receiptData.misc_fee).toLocaleString()}</span>
-                </div>
-                ` : ''}
-                <div class="info-row total-row">
-                  <span class="info-label">Amount Paid:</span>
-                  <span>₹ ${parseFloat(paidAmount).toLocaleString()}</span>
-                </div>
-                ${parseFloat(receiptData.current_dues) > 0 ? `
-                <div class="dues-notice">
-                  <div class="info-row">
-                    <span class="info-label">Current Dues:</span>
-                    <span>₹ ${parseFloat(receiptData.current_dues).toLocaleString()}</span>
-                  </div>
-                </div>
-                ` : ''}
-              </div>
-              ${receiptData.remarks ? `
-              <div style="margin-top: 15px;">
-                <span class="info-label">Remarks:</span>
-                <p>${receiptData.remarks}</p>
-              </div>
-              ` : ''}
-            </div>
-            
-            <div class="signature">
-              <div class="signature-box">
-                <div class="signature-line"></div>
-                <div>Parent's Signature</div>
-              </div>
-              
-              <div class="signature-box">
-                <div class="signature-line"></div>
-                <div>Authorized Signatory</div>
-                <div>DPS Mushkipur</div>
-              </div>
-            </div>
-            
-            <div class="qr-container">
-              <!-- QR code would be inserted here in a real implementation -->
-              <div>Scan to verify</div>
-            </div>
-            
-            <div class="footer">
-              <p>This is a computer-generated receipt and does not require a physical signature.</p>
-              <p>For any queries, please contact the school office.</p>
-            </div>
+          <div class="info-item">
+            <span class="info-label">Admission No:</span>
+            <span class="info-value">${receiptData.admission_no || 'N/A'}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Class:</span>
+            <span class="info-value">${receiptData.student_class || 'N/A'}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Father's Name:</span>
+            <span class="info-value">${receiptData.father_name || 'N/A'}</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Fee Details Section -->
+      <div class="section">
+        <div class="section-title">💰 Fee Details</div>
+        
+        <!-- ✅ FIXED: Fee Table with S.No, Description, and Amount columns -->
+        <table class="fee-table">
+          <thead>
+            <tr>
+              <th class="serial-no">S.No</th>
+              <th class="description">Description</th>
+              <th class="amount">Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${feeRows}
+          </tbody>
+        </table>
+        
+        <!-- Summary Section -->
+        <div class="summary-container">
+          <div class="summary-row subtotal">
+            <span class="summary-label">Subtotal:</span>
+            <span class="summary-value">${formatCurrency(tutionFee + transportFee + miscFee)}</span>
+          </div>
+          ${discount > 0 ? `
+          <div class="summary-row discount">
+            <span class="summary-label">Discount:</span>
+            <span class="summary-value">- ${formatCurrency(discount)}</span>
+          </div>
+          ` : ''}
+          <div class="summary-row">
+            <span class="summary-label">Net Amount:</span>
+            <span class="summary-value">${formatCurrency(totalAmount)}</span>
+          </div>
+          <div class="summary-row total-paid">
+            <span class="summary-label">✓ Amount Paid:</span>
+            <span class="summary-value">${formatCurrency(paidAmount)}</span>
           </div>
         </div>
         
-        <div class="watermark">PAID</div>
-      </body>
-      </html>
+        ${currentDues > 0 ? `
+        <!-- Dues Warning -->
+        <div class="dues-warning">
+          <span class="dues-label">⚠️ Outstanding Dues:</span>
+          <span class="dues-amount">${formatCurrency(currentDues)}</span>
+        </div>
+        ` : ''}
+        
+        ${receiptData.remarks ? `
+        <!-- Remarks -->
+        <div class="remarks-box">
+          <div class="remarks-label">📝 Remarks:</div>
+          <div class="remarks-text">${receiptData.remarks}</div>
+        </div>
+        ` : ''}
+        
+        <div class="payment-mode">✓ Payment Received</div>
+      </div>
+      
+      <!-- Signature Section -->
+      <div class="signature-section">
+        <div class="signature-box">
+          <div class="signature-line"></div>
+          <div class="signature-title">Parent's Signature</div>
+        </div>
+        <div class="signature-box">
+          <div class="signature-line"></div>
+          <div class="signature-title">Authorized Signatory</div>
+          <div class="signature-subtitle">DPS Mushkipur</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer">
+      <p>This is a computer-generated receipt and does not require a physical signature.</p>
+      <p>For any queries, please contact the school office at ${schoolDetails.phone}</p>
+      <p class="thank-you">Thank you for your payment!</p>
+    </div>
+  </div>
+</body>
+</html>
     `;
   };
 
@@ -363,17 +769,34 @@ export default function ReceiptScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
       const html = generateReceiptHTML();
-      const { uri } = await Print.printToFileAsync({ html });
       
-      // Check if sharing is available
+      if (!html) {
+        Alert.alert("Error", "Unable to generate receipt. Please try again.");
+        return;
+      }
+      
+      const { uri } = await Print.printToFileAsync({ 
+        html,
+        margins: {
+          left: 20,
+          top: 20,
+          right: 20,
+          bottom: 20,
+        }
+      });
+      
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+        await Sharing.shareAsync(uri, { 
+          UTI: '.pdf', 
+          mimeType: 'application/pdf',
+          dialogTitle: `Receipt_${receiptData.receipt_id}`
+        });
       } else {
         Alert.alert("Sharing not available", "Sharing is not available on this device.");
       }
     } catch (error) {
       console.error("Error printing receipt:", error);
-      Alert.alert("Print Error", "There was an error while generating the receipt.");
+      Alert.alert("Print Error", "There was an error while generating the receipt. Please try again.");
     }
   };
 
@@ -381,8 +804,10 @@ export default function ReceiptScreen() {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <ActivityIndicator size="large" color="#1e3c72" />
-        <Text style={styles.loadingText}>Loading receipt...</Text>
+        <View style={styles.loadingContent}>
+          <ActivityIndicator size="large" color="#1e3c72" />
+          <Text style={styles.loadingText}>Loading receipt...</Text>
+        </View>
       </SafeAreaView>
     );
   }
@@ -394,53 +819,54 @@ export default function ReceiptScreen() {
         <FontAwesome5 name="exclamation-triangle" size={50} color="#e74c3c" />
         <Text style={styles.errorTitle}>Error Loading Receipt</Text>
         <Text style={styles.errorMessage}>{error}</Text>
-        <TouchableOpacity 
-          style={styles.retryButton}
-          onPress={fetchReceiptDetails}
-        >
+        <TouchableOpacity style={styles.retryButton} onPress={fetchReceiptDetails}>
           <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.backButtonError} onPress={() => router.back()}>
+          <Text style={styles.backButtonErrorText}>Go Back</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
-  // Determine paid amount (use total if paid_amount is null)
-  const paidAmount = receiptData.paid_amount !== null ? 
-                     parseFloat(receiptData.paid_amount) : 
-                     parseFloat(receiptData.total);
+  if (!receiptData) {
+    return null;
+  }
 
-  // Determine if this is a partial payment
+  // Calculate values for display
+  const paidAmount = receiptData.paid_amount !== null 
+    ? parseFloat(receiptData.paid_amount) 
+    : parseFloat(receiptData.total);
+
   const isPartialPayment = receiptData.paid_amount !== null && 
-                          parseFloat(receiptData.paid_amount) < parseFloat(receiptData.total);
+    parseFloat(receiptData.paid_amount) < parseFloat(receiptData.total);
 
-  // Split months if there are multiple
-  const paidMonths = receiptData.paid_month.split(',').map(month => month.trim());
+  const paidMonths = receiptData.paid_month 
+    ? receiptData.paid_month.split(',').map(month => month.trim()) 
+    : ['N/A'];
 
-  // Check if there are current dues
   const hasDues = receiptData.current_dues && parseFloat(receiptData.current_dues) > 0;
+
+  const tutionFee = receiptData.fee_details?.tution_fee ? parseFloat(receiptData.fee_details.tution_fee) : 0;
+  const transportFee = receiptData.fee_details?.transport_fee ? parseFloat(receiptData.fee_details.transport_fee) : 0;
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
-      {/* Header with Watermark */}
+      {/* Watermark */}
       <View style={styles.watermark}>
         <Text style={styles.watermarkText}>PAID</Text>
       </View>
       
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.push('/Dashboard')}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <FontAwesome5 name="arrow-left" size={20} color="#1e3c72" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Fee Receipt</Text>
-        <TouchableOpacity 
-          style={styles.printButton}
-          onPress={printReceipt}
-        >
-          <FontAwesome5 name="print" size={20} color="#1e3c72" />
+        <TouchableOpacity style={styles.printButton} onPress={printReceipt}>
+          <FontAwesome5 name="download" size={20} color="#1e3c72" />
         </TouchableOpacity>
       </View>
       
@@ -450,19 +876,13 @@ export default function ReceiptScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Receipt Card */}
-        <Animated.View 
-          entering={FadeIn.delay(200).springify()}
-          style={styles.receiptCard}
-        >
+        <Animated.View entering={FadeIn.delay(200).springify()} style={styles.receiptCard}>
           {/* School Info */}
-          <LinearGradient
-            colors={['#1e3c72', '#2a5298']}
-            style={styles.schoolHeader}
-          >
+          <LinearGradient colors={['#1e3c72', '#2a5298']} style={styles.schoolHeader}>
             <Image 
               source={schoolDetails.logo}
               style={styles.schoolLogo}
-              defaultSource={require('./assets/default.png')} // Update with a fallback logo
+              defaultSource={require('./assets/default.png')}
             />
             <View style={styles.schoolInfo}>
               <Text style={styles.schoolName}>{schoolDetails.name}</Text>
@@ -474,18 +894,21 @@ export default function ReceiptScreen() {
           <View style={styles.receiptTitleContainer}>
             <Text style={styles.receiptTitle}>RECEIPT</Text>
             <View style={styles.receiptMeta}>
-              <Text style={styles.receiptNo}>#{receiptData.receipt_id}</Text>
-              <Text style={styles.receiptDate}>
-                {new Date(receiptData.payment_date).toLocaleDateString()}
-              </Text>
+              <View style={styles.receiptMetaItem}>
+                <FontAwesome5 name="hashtag" size={12} color="#7f8c8d" />
+                <Text style={styles.receiptNo}>{receiptData.receipt_id}</Text>
+              </View>
+              <View style={styles.receiptMetaItem}>
+                <FontAwesome5 name="calendar" size={12} color="#7f8c8d" />
+                <Text style={styles.receiptDate}>
+                  {new Date(receiptData.payment_date).toLocaleDateString('en-IN')}
+                </Text>
+              </View>
             </View>
           </View>
           
           {/* Student Information */}
-          <Animated.View 
-            entering={SlideInDown.delay(300).springify()}
-            style={styles.section}
-          >
+          <Animated.View entering={SlideInDown.delay(300).springify()} style={styles.section}>
             <View style={styles.sectionHeader}>
               <FontAwesome5 name="user-graduate" size={16} color="#1e3c72" />
               <Text style={styles.sectionTitle}>Student Information</Text>
@@ -494,132 +917,134 @@ export default function ReceiptScreen() {
             <View style={styles.studentDetails}>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Name</Text>
-                <Text style={styles.detailValue}>{receiptData.student_name}</Text>
+                <Text style={styles.detailValue}>{receiptData.student_name || 'N/A'}</Text>
               </View>
-              
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Admission No.</Text>
-                <Text style={styles.detailValue}>{receiptData.admission_no}</Text>
+                <Text style={styles.detailValue}>{receiptData.admission_no || 'N/A'}</Text>
               </View>
-              
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Class</Text>
-                <Text style={styles.detailValue}>{receiptData.student_class}</Text>
+                <Text style={styles.detailValue}>{receiptData.student_class || 'N/A'}</Text>
               </View>
-              
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Father's Name</Text>
-                <Text style={styles.detailValue}>{receiptData.father_name}</Text>
+                <Text style={styles.detailValue}>{receiptData.father_name || 'N/A'}</Text>
               </View>
             </View>
           </Animated.View>
           
           {/* Payment Details */}
-          <Animated.View 
-            entering={SlideInDown.delay(400).springify()}
-            style={styles.section}
-          >
+          <Animated.View entering={SlideInDown.delay(400).springify()} style={styles.section}>
             <View style={styles.sectionHeader}>
               <FontAwesome5 name="money-check-alt" size={16} color="#1e3c72" />
               <Text style={styles.sectionTitle}>Payment Details</Text>
             </View>
             
             <View style={styles.paymentDetails}>
-              <View style={styles.paymentRow}>
-                <View style={styles.paymentInfo}>
-                  <FontAwesome5 
-                    name="calendar-alt" 
-                    size={16} 
-                    color="#1e3c72" 
-                    style={styles.paymentIcon}
-                  />
+              {/* Month Info */}
+              <View style={styles.monthInfoRow}>
+                <View style={styles.monthInfo}>
+                  <FontAwesome5 name="calendar-alt" size={16} color="#1e3c72" style={styles.paymentIcon} />
                   <View>
                     <Text style={styles.paymentMethod}>
                       {paidMonths.length > 1 ? `${paidMonths.join(', ')} Fees` : `${paidMonths[0]} Fee`}
                     </Text>
                     <Text style={styles.paymentDate}>
-                      Paid on {new Date(receiptData.payment_date).toLocaleDateString()}
+                      Paid on {new Date(receiptData.payment_date).toLocaleDateString('en-IN')}
                     </Text>
                   </View>
                 </View>
                 <View style={styles.amountContainer}>
                   <Text style={styles.amountLabel}>Paid Amount</Text>
-                  <Text style={styles.amountValue}>₹{paidAmount.toLocaleString()}</Text>
-                  
+                  <Text style={styles.amountValue}>₹{paidAmount.toLocaleString('en-IN')}</Text>
                   {isPartialPayment && (
-                    <Text style={styles.partialPayment}>Partial Payment</Text>
+                    <View style={styles.partialBadge}>
+                      <Text style={styles.partialPayment}>Partial</Text>
+                    </View>
                   )}
                 </View>
               </View>
               
               <View style={styles.divider} />
               
+              {/* Fee Breakdown */}
               <View style={styles.feeBreakdown}>
                 <Text style={styles.breakdownTitle}>Fee Breakdown</Text>
                 
-                {/* Only show fee types that are present in the response */}
-                {receiptData.fee_details.tution_fee && (
+                {tutionFee > 0 && (
                   <View style={styles.feeRow}>
-                    <Text style={styles.feeLabel}>Tuition Fee</Text>
-                    <Text style={styles.feeValue}>
-                      ₹{parseFloat(receiptData.fee_details.tution_fee).toLocaleString()}
-                    </Text>
+                    <View style={styles.feeInfo}>
+                      <FontAwesome5 name="book" size={12} color="#4CAF50" />
+                      <View style={styles.feeTextContainer}>
+                        <Text style={styles.feeLabel}>Tuition Fee</Text>
+                        <Text style={styles.feePeriod}>Period: {paidMonths.join(', ')}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.feeValue}>₹{tutionFee.toLocaleString('en-IN')}</Text>
                   </View>
                 )}
                 
-                {receiptData.fee_details.transport_fee && (
+                {transportFee > 0 && (
                   <View style={styles.feeRow}>
-                    <Text style={styles.feeLabel}>Transport Fee</Text>
-                    <Text style={styles.feeValue}>
-                      ₹{parseFloat(receiptData.fee_details.transport_fee).toLocaleString()}
-                    </Text>
-                  </View>
-                )}
-                
-                {receiptData.fee_details.total && (
-                  <View style={[styles.feeRow, styles.totalRow]}>
-                    <Text style={styles.totalLabel}>Total</Text>
-                    <Text style={styles.totalValue}>
-                      ₹{parseFloat(receiptData.fee_details.total).toLocaleString()}
-                    </Text>
-                  </View>
-                )}
-                
-                {parseFloat(receiptData.discount) > 0 && (
-                  <View style={styles.feeRow}>
-                    <Text style={styles.feeLabel}>Discount</Text>
-                    <Text style={styles.discountValue}>
-                      - ₹{parseFloat(receiptData.discount).toLocaleString()}
-                    </Text>
+                    <View style={styles.feeInfo}>
+                      <FontAwesome5 name="bus" size={12} color="#2196F3" />
+                      <View style={styles.feeTextContainer}>
+                        <Text style={styles.feeLabel}>Transport Fee</Text>
+                        <Text style={styles.feePeriod}>Period: {paidMonths.join(', ')}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.feeValue}>₹{transportFee.toLocaleString('en-IN')}</Text>
                   </View>
                 )}
                 
                 {parseFloat(receiptData.misc_fee) > 0 && (
                   <View style={styles.feeRow}>
-                    <Text style={styles.feeLabel}>Misc. Fee</Text>
-                    <Text style={styles.miscValue}>
-                      + ₹{parseFloat(receiptData.misc_fee).toLocaleString()}
-                    </Text>
+                    <View style={styles.feeInfo}>
+                      <FontAwesome5 name="file-alt" size={12} color="#9C27B0" />
+                      <View style={styles.feeTextContainer}>
+                        <Text style={styles.feeLabel}>Misc. Fee</Text>
+                        <Text style={styles.feePeriod}>Additional charges</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.miscValue}>+₹{parseFloat(receiptData.misc_fee).toLocaleString('en-IN')}</Text>
                   </View>
                 )}
                 
-                <View style={[styles.feeRow, styles.netAmountRow]}>
-                  <Text style={styles.netAmountLabel}>Net Amount</Text>
-                  <Text style={styles.netAmountValue}>
-                    ₹{parseFloat(receiptData.total).toLocaleString()}
-                  </Text>
+                {parseFloat(receiptData.discount) > 0 && (
+                  <View style={styles.feeRow}>
+                    <View style={styles.feeInfo}>
+                      <FontAwesome5 name="tag" size={12} color="#e74c3c" />
+                      <View style={styles.feeTextContainer}>
+                        <Text style={styles.feeLabel}>Discount</Text>
+                        <Text style={styles.feePeriod}>Applied discount</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.discountValue}>-₹{parseFloat(receiptData.discount).toLocaleString('en-IN')}</Text>
+                  </View>
+                )}
+                
+                <View style={[styles.feeRow, styles.totalRow]}>
+                  <Text style={styles.totalLabel}>Total Amount</Text>
+                  <Text style={styles.totalValue}>₹{parseFloat(receiptData.total).toLocaleString('en-IN')}</Text>
                 </View>
                 
-                {/* Current Dues Section */}
+                {/* Net Paid */}
+                <View style={styles.netPaidContainer}>
+                  <View style={styles.netPaidRow}>
+                    <Text style={styles.netPaidLabel}>✓ Amount Paid</Text>
+                    <Text style={styles.netPaidValue}>₹{paidAmount.toLocaleString('en-IN')}</Text>
+                  </View>
+                </View>
+                
+                {/* Current Dues */}
                 {hasDues && (
                   <View style={styles.duesContainer}>
                     <View style={styles.duesHeader}>
                       <FontAwesome5 name="exclamation-triangle" size={14} color="#f39c12" />
                       <Text style={styles.duesTitle}>Current Dues</Text>
                     </View>
-                    <Text style={styles.duesAmount}>
-                      ₹{parseFloat(receiptData.current_dues).toLocaleString()}
-                    </Text>
+                    <Text style={styles.duesAmount}>₹{parseFloat(receiptData.current_dues).toLocaleString('en-IN')}</Text>
                   </View>
                 )}
                 
@@ -634,17 +1059,11 @@ export default function ReceiptScreen() {
           </Animated.View>
           
           {/* Verification */}
-          <Animated.View 
-            entering={SlideInDown.delay(500).springify()}
-            style={[styles.section, styles.verificationSection]}
-          >
+          <Animated.View entering={SlideInDown.delay(500).springify()} style={[styles.section, styles.verificationSection]}>
             <View style={styles.qrContainer}>
-              {/* <QRCode
-                value={`Receipt:${receiptData.receipt_id},Student:${receiptData.admission_no},Amount:${paidAmount}`}
-                size={90}
-                color="#1e3c72"
-                backgroundColor="white"
-              /> */}
+              <View style={styles.qrPlaceholder}>
+                <FontAwesome5 name="qrcode" size={60} color="#1e3c72" />
+              </View>
               <Text style={styles.scanText}>Scan to verify</Text>
             </View>
             
@@ -657,35 +1076,22 @@ export default function ReceiptScreen() {
           
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              This is a computer-generated receipt and doesn't require a signature.
-            </Text>
-            <Text style={styles.footerText}>
-              For any queries, please contact the school office.
-            </Text>
+            <Text style={styles.footerText}>✓ This is a computer-generated receipt.</Text>
+            <Text style={styles.footerText}>For queries, contact: {schoolDetails.phone}</Text>
           </View>
         </Animated.View>
       </ScrollView>
       
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
-        <TouchableOpacity 
-          style={[styles.actionButton, styles.shareButton]}
-          onPress={printReceipt}
-        >
-          <LinearGradient
-            colors={['#1e3c72', '#2a5298']}
-            style={styles.buttonGradient}
-          >
+        <TouchableOpacity style={[styles.actionButton, styles.shareButton]} onPress={printReceipt}>
+          <LinearGradient colors={['#1e3c72', '#2a5298']} style={styles.buttonGradient}>
             <FontAwesome5 name="share-alt" size={18} color="#ffffff" />
             <Text style={styles.buttonText}>Share Receipt</Text>
           </LinearGradient>
         </TouchableOpacity>
         
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => router.push('/dashboard')}
-        >
+        <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/Dashboard')}>
           <Text style={styles.doneButtonText}>Done</Text>
         </TouchableOpacity>
       </View>
@@ -704,6 +1110,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#ffffff',
   },
+  loadingContent: {
+    alignItems: 'center',
+  },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
@@ -714,6 +1123,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: '#ffffff',
   },
   errorTitle: {
     fontSize: 20,
@@ -730,14 +1140,23 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     backgroundColor: '#1e3c72',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 30,
+    paddingVertical: 12,
     borderRadius: 8,
+    marginBottom: 12,
   },
   retryButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  backButtonError: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  backButtonErrorText: {
+    color: '#1e3c72',
+    fontSize: 16,
   },
   watermark: {
     position: 'absolute',
@@ -751,7 +1170,7 @@ const styles = StyleSheet.create({
   },
   watermarkText: {
     fontSize: 120,
-    color: 'rgba(200, 200, 200, 0.2)',
+    color: 'rgba(200, 200, 200, 0.15)',
     fontWeight: 'bold',
     transform: [{ rotate: '-45deg' }],
   },
@@ -765,9 +1184,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f0f0f0',
@@ -778,9 +1197,9 @@ const styles = StyleSheet.create({
     color: '#2c3e50',
   },
   printButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f0f0f0',
@@ -808,9 +1227,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   schoolLogo: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 55,
+    height: 55,
+    borderRadius: 27.5,
     backgroundColor: '#ffffff',
     marginRight: 16,
   },
@@ -826,7 +1245,7 @@ const styles = StyleSheet.create({
   schoolAddress: {
     color: '#ffffff',
     fontSize: 12,
-    opacity: 0.8,
+    opacity: 0.85,
   },
   receiptTitleContainer: {
     alignItems: 'center',
@@ -835,20 +1254,26 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   receiptTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#1e3c72',
-    letterSpacing: 2,
+    letterSpacing: 3,
   },
   receiptMeta: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: 10,
+    gap: 20,
+  },
+  receiptMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   receiptNo: {
     fontSize: 14,
     color: '#7f8c8d',
-    marginRight: 16,
+    fontWeight: '600',
   },
   receiptDate: {
     fontSize: 14,
@@ -868,16 +1293,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#2c3e50',
-    marginLeft: 8,
+    marginLeft: 10,
   },
   studentDetails: {
     backgroundColor: '#f8f9fa',
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   detailRow: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   detailLabel: {
     flex: 1,
@@ -888,22 +1313,23 @@ const styles = StyleSheet.create({
     flex: 2,
     fontSize: 14,
     color: '#2c3e50',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   paymentDetails: {
     backgroundColor: '#f8f9fa',
-    borderRadius: 8,
+    borderRadius: 10,
     overflow: 'hidden',
   },
-  paymentRow: {
+  monthInfoRow: {
     flexDirection: 'row',
     padding: 16,
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  paymentInfo: {
+  monthInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   paymentIcon: {
     marginRight: 12,
@@ -927,22 +1353,25 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   amountValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#2c3e50',
+    color: '#1e3c72',
+  },
+  partialBadge: {
+    marginTop: 4,
   },
   partialPayment: {
     fontSize: 11,
     color: '#f39c12',
-    marginTop: 4,
     backgroundColor: '#fff8e1',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    fontWeight: '600',
   },
   divider: {
     height: 1,
-    backgroundColor: '#ecf0f1',
+    backgroundColor: '#e0e0e0',
   },
   feeBreakdown: {
     padding: 16,
@@ -951,83 +1380,108 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#2c3e50',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   feeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    marginBottom: 12,
+    paddingVertical: 4,
+  },
+  feeInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flex: 1,
+    gap: 10,
+  },
+  feeTextContainer: {
+    flex: 1,
   },
   feeLabel: {
     fontSize: 14,
-    color: '#7f8c8d',
+    color: '#333',
+    fontWeight: '500',
+  },
+  feePeriod: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   feeValue: {
     fontSize: 14,
     color: '#2c3e50',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: '#ecf0f1',
-    paddingTop: 8,
-    marginTop: 4,
-    marginBottom: 12,
+    borderTopColor: '#e0e0e0',
+    paddingTop: 12,
+    marginTop: 8,
+    marginBottom: 0,
   },
   totalLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: 'bold',
     color: '#2c3e50',
   },
   totalValue: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: 'bold',
     color: '#2c3e50',
   },
   discountValue: {
     fontSize: 14,
     color: '#e74c3c',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   miscValue: {
     fontSize: 14,
     color: '#3498db',
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  netAmountRow: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#ecf0f1',
+  netPaidContainer: {
+    marginTop: 12,
+    backgroundColor: '#1e3c72',
+    padding: 14,
+    borderRadius: 10,
   },
-  netAmountLabel: {
+  netPaidRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  netPaidLabel: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#2c3e50',
+    color: '#ffffff',
   },
-  netAmountValue: {
-    fontSize: 15,
+  netPaidValue: {
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#2c3e50',
+    color: '#ffffff',
   },
   duesContainer: {
-    marginTop: 16,
+    marginTop: 14,
     padding: 12,
     backgroundColor: '#fff8e1',
-    borderRadius: 8,
-    borderLeftWidth: 3,
+    borderRadius: 10,
+    borderLeftWidth: 4,
     borderLeftColor: '#f39c12',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   duesHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    gap: 8,
   },
   duesTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: '#f39c12',
-    marginLeft: 6,
   },
   duesAmount: {
     fontSize: 16,
@@ -1035,29 +1489,43 @@ const styles = StyleSheet.create({
     color: '#f39c12',
   },
   remarksContainer: {
-    marginTop: 16,
-    padding: 10,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 6,
+    marginTop: 14,
+    padding: 12,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
   },
   remarksLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#2c3e50',
+    color: '#1565c0',
     marginBottom: 4,
   },
   remarksText: {
     fontSize: 13,
-    color: '#7f8c8d',
+    color: '#333',
+    lineHeight: 20,
   },
   verificationSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 0,
+    paddingVertical: 24,
   },
   qrContainer: {
     alignItems: 'center',
+  },
+  qrPlaceholder: {
+    width: 90,
+    height: 90,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   scanText: {
     fontSize: 12,
@@ -1069,7 +1537,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   signatureLine: {
-    width: 120,
+    width: 130,
     height: 1,
     backgroundColor: '#2c3e50',
     marginBottom: 8,
@@ -1082,6 +1550,7 @@ const styles = StyleSheet.create({
   signaturePosition: {
     fontSize: 12,
     color: '#7f8c8d',
+    marginTop: 2,
   },
   footer: {
     padding: 16,
@@ -1106,19 +1575,20 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 10,
   },
   actionButton: {
     flex: 1,
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 8,
+    marginHorizontal: 6,
     borderRadius: 12,
     backgroundColor: '#f5f6fa',
+    overflow: 'hidden',
   },
   shareButton: {
-    overflow: 'hidden',
+    backgroundColor: 'transparent',
   },
   buttonGradient: {
     flex: 1,
@@ -1131,7 +1601,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: 'bold',
     fontSize: 16,
-    marginLeft: 8,
+    marginLeft: 10,
   },
   doneButtonText: {
     color: '#1e3c72',

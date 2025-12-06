@@ -28,7 +28,7 @@ export default function RootLayout() {
       if (studentId) {
         // Student is logged in
         console.log('Student found, redirecting to student/index');
-        router.replace('student_home');
+        router.replace('./student_home');
         setIsLoading(false);
         return;
       }

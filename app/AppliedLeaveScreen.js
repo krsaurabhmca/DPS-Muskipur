@@ -30,7 +30,9 @@ const COLORS = {
   rejected: '#F44336',
 };
 
-export default async function AdminLeaveListScreen() {
+// ❌ WRONG: export default async function AdminLeaveListScreen() {
+// ✅ CORRECT: Remove 'async' keyword
+export default function AdminLeaveListScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -42,6 +44,7 @@ export default async function AdminLeaveListScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedLeave, setSelectedLeave] = useState(null);
   const [remarks, setRemarks] = useState('');
+  const [userId, setUserId] = useState(null); // ✅ Add state for userId
 
   useEffect(() => {
     checkAdminAccess();
@@ -50,15 +53,27 @@ export default async function AdminLeaveListScreen() {
   useEffect(() => {
     filterLeaves();
   }, [selectedFilter, searchQuery, leaves]);
-  const userId = await AsyncStorage.getItem('user_id');
+
+  // ❌ WRONG: const userId = await AsyncStorage.getItem('user_id');
+  // ✅ CORRECT: Move inside useEffect or async function
+
   const checkAdminAccess = async () => {
-    const userType = await AsyncStorage.getItem('user_type');
-    if (userType !== 'ADMIN') {
-      Alert.alert('Access Denied', 'This section is only for administrators.');
+    try {
+      const userType = await AsyncStorage.getItem('user_type');
+      const storedUserId = await AsyncStorage.getItem('user_id'); // ✅ Get userId here
+      
+      setUserId(storedUserId); // ✅ Store in state
+      
+      if (userType !== 'ADMIN') {
+        Alert.alert('Access Denied', 'This section is only for administrators.');
+        router.back();
+        return;
+      }
+      fetchLeaveApplications();
+    } catch (err) {
+      console.error('Error checking admin access:', err);
       router.back();
-      return;
     }
-    fetchLeaveApplications();
   };
 
   const fetchLeaveApplications = async () => {
@@ -124,8 +139,8 @@ export default async function AdminLeaveListScreen() {
     // Apply search filter
     if (searchQuery.trim()) {
       filtered = filtered.filter(leave =>
-        leave.student_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        leave.cause.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        leave.student_id?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
+        leave.cause?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (leave.student_name && leave.student_name.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
@@ -140,6 +155,9 @@ export default async function AdminLeaveListScreen() {
 
   const handleStatusUpdate = async (leaveId, newStatus) => {
     try {
+      // ✅ Get userId from state or fetch it again if needed
+      const currentUserId = userId || await AsyncStorage.getItem('user_id');
+      
       const response = await fetch(
         'https://dpsmushkipur.com/bine/api.php?task=leave_update',
         {
@@ -151,7 +169,7 @@ export default async function AdminLeaveListScreen() {
             id: leaveId,
             status: newStatus,
             remarks: remarks || '',
-            updated_by : userId,
+            updated_by: currentUserId, // ✅ Use the userId from state
           }),
         }
       );
@@ -316,12 +334,12 @@ export default async function AdminLeaveListScreen() {
       </View>
 
       {/* Error Banner */}
-      {error && (
+      {error ? (
         <View style={styles.errorBanner}>
           <Ionicons name="information-circle" size={16} color="#F57C00" />
           <Text style={styles.errorBannerText}>{error}</Text>
         </View>
-      )}
+      ) : null}
 
       {/* Leave List */}
       <ScrollView
@@ -536,12 +554,12 @@ function LeaveCard({
               <Text style={styles.reasonText}>{leave.cause}</Text>
             </View>
 
-            {leave.remarks && (
+            {leave.remarks ? (
               <View style={styles.remarksSection}>
                 <Text style={styles.remarksLabelCard}>Admin Remarks:</Text>
                 <Text style={styles.remarksTextCard}>{leave.remarks}</Text>
               </View>
-            )}
+            ) : null}
           </View>
         )}
       </TouchableOpacity>

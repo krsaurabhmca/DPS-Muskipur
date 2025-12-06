@@ -31,9 +31,16 @@ const COLORS = {
   holiday: '#2196F3',
 };
 
+// Updated MONTHS array to lowercase for new API format
 const MONTHS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+  'jul', 'aug', 'sep', 'oct', 'nov', 'dec'
+];
+
+// Display months for UI (capitalized)
+const MONTHS_DISPLAY = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -82,6 +89,8 @@ export default function AttendanceScreen() {
 
       const data = await response.json();
       
+      console.log('Attendance API Response:', data); // Debug log
+      
       if (data && Array.isArray(data)) {
         setAttendanceData(data);
         
@@ -122,7 +131,10 @@ export default function AttendanceScreen() {
 
   const calculateStats = (data, month) => {
     const monthKey = formatMonthForAPI(month);
+    console.log('Looking for month key:', monthKey); // Debug log
+    
     const monthData = data.find(item => item.att_month === monthKey);
+    console.log('Found month data:', monthData); // Debug log
     
     if (!monthData) {
       setStats({ present: 0, absent: 0, leave: 0, holiday: 0, total: 0 });
@@ -133,7 +145,7 @@ export default function AttendanceScreen() {
 
     for (let i = 1; i <= 31; i++) {
       const day = monthData[`d_${i}`];
-      if (day !== null) {
+      if (day !== null && day !== undefined && day !== '') {
         total++;
         if (day === 'P') present++;
         else if (day === 'A') absent++;
@@ -145,10 +157,16 @@ export default function AttendanceScreen() {
     setStats({ present, absent, leave, holiday, total });
   };
 
+  // ✅ Updated function to match new API format: dec_2025
   const formatMonthForAPI = (date) => {
-    const month = MONTHS[date.getMonth()];
+    const month = MONTHS[date.getMonth()]; // lowercase: jan, feb, etc.
     const year = date.getFullYear();
-    return `${month}-${year}`;
+    return `${month}_${year}`; // Changed from `${month}-${year}` to `${month}_${year}`
+  };
+
+  // Format month for display (e.g., "December 2025")
+  const formatMonthForDisplay = (date) => {
+    return `${MONTHS_DISPLAY[date.getMonth()]} ${date.getFullYear()}`;
   };
 
   const handleMonthChange = (direction) => {
@@ -176,8 +194,8 @@ export default function AttendanceScreen() {
   };
 
   const getAttendanceColor = (status) => {
-    if (!status) return COLORS.lightGray;
-    switch (status) {
+    if (!status || status === '') return COLORS.lightGray;
+    switch (status.toUpperCase()) { // Handle case insensitivity
       case 'P': return COLORS.present;
       case 'A': return COLORS.absent;
       case 'L': return COLORS.leave;
@@ -187,8 +205,8 @@ export default function AttendanceScreen() {
   };
 
   const getAttendanceLabel = (status) => {
-    if (!status) return '';
-    switch (status) {
+    if (!status || status === '') return '';
+    switch (status.toUpperCase()) { // Handle case insensitivity
       case 'P': return 'P';
       case 'A': return 'A';
       case 'L': return 'L';
@@ -229,13 +247,13 @@ export default function AttendanceScreen() {
             <Text
               style={[
                 styles.dayNumber,
-                attendance && styles.dayNumberWithStatus,
+                attendance && attendance !== '' && styles.dayNumberWithStatus,
                 isToday && styles.todayText,
               ]}
             >
               {day}
             </Text>
-            {attendance && (
+            {attendance && attendance !== '' && (
               <Text style={styles.attendanceStatus}>
                 {getAttendanceLabel(attendance)}
               </Text>
@@ -279,7 +297,12 @@ export default function AttendanceScreen() {
             <Ionicons name="arrow-back" size={24} color={COLORS.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Attendance</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={onRefresh}
+          >
+            <Ionicons name="refresh" size={24} color={COLORS.white} />
+          </TouchableOpacity>
         </View>
 
         {/* Stats Cards */}
@@ -307,17 +330,24 @@ export default function AttendanceScreen() {
             <Text style={styles.statValue}>{stats.leave}</Text>
             <Text style={styles.statLabel}>Leave</Text>
           </View>
-        </View>
 
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: COLORS.holiday + '30' }]}>
+              <Ionicons name="sunny" size={24} color={COLORS.white} />
+            </View>
+            <Text style={styles.statValue}>{stats.holiday}</Text>
+            <Text style={styles.statLabel}>Holiday</Text>
+          </View>
+        </View>
       </LinearGradient>
 
       {/* Error Banner */}
-      {error && (
+      {error ? (
         <View style={styles.errorBanner}>
-          <Ionicons name="information-circle" size={16} color={COLORS.error} />
+          <Ionicons name="information-circle" size={16} color="#F57C00" />
           <Text style={styles.errorBannerText}>{error}</Text>
         </View>
-      )}
+      ) : null}
 
       <ScrollView
         style={styles.scrollView}
@@ -342,7 +372,10 @@ export default function AttendanceScreen() {
           
           <View style={styles.monthDisplay}>
             <Text style={styles.monthText}>
-              {MONTHS[selectedMonth.getMonth()]} {selectedMonth.getFullYear()}
+              {formatMonthForDisplay(selectedMonth)}
+            </Text>
+            <Text style={styles.monthApiFormat}>
+              ({formatMonthForAPI(selectedMonth)})
             </Text>
           </View>
           
@@ -422,7 +455,51 @@ export default function AttendanceScreen() {
               {stats.leave}
             </Text>
           </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Holidays:</Text>
+            <Text style={[styles.summaryValue, { color: COLORS.holiday }]}>
+              {stats.holiday}
+            </Text>
+          </View>
         </View>
+
+        {/* Available Months */}
+        {attendanceData.length > 0 && (
+          <View style={styles.availableMonthsCard}>
+            <View style={styles.summaryHeader}>
+              <Ionicons name="calendar-outline" size={24} color={COLORS.primary} />
+              <Text style={styles.summaryTitle}>Available Records</Text>
+            </View>
+            <View style={styles.monthChipsContainer}>
+              {attendanceData.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.monthChip,
+                    formatMonthForAPI(selectedMonth) === item.att_month && styles.monthChipActive
+                  ]}
+                  onPress={() => {
+                    // Parse the att_month (e.g., "dec_2025") to set selected month
+                    const [monthStr, yearStr] = item.att_month.split('_');
+                    const monthIndex = MONTHS.indexOf(monthStr.toLowerCase());
+                    if (monthIndex !== -1) {
+                      const newDate = new Date(parseInt(yearStr), monthIndex, 1);
+                      setSelectedMonth(newDate);
+                      calculateStats(attendanceData, newDate);
+                    }
+                  }}
+                >
+                  <Text style={[
+                    styles.monthChipText,
+                    formatMonthForAPI(selectedMonth) === item.att_month && styles.monthChipTextActive
+                  ]}>
+                    {item.att_month.replace('_', ' ').toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -484,31 +561,31 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    gap: 10,
+    gap: 8,
     marginBottom: 15,
   },
   statCard: {
     flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 15,
-    padding: 12,
+    padding: 10,
     alignItems: 'center',
   },
   statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   statValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.white,
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: COLORS.white,
     opacity: 0.9,
     marginTop: 2,
@@ -535,6 +612,13 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
     fontWeight: '600',
   },
+  percentageIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   progressBarContainer: {
     height: 8,
     backgroundColor: COLORS.lightGray,
@@ -543,7 +627,6 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: COLORS.secondary,
     borderRadius: 4,
   },
   errorBanner: {
@@ -601,6 +684,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.primary,
   },
+  monthApiFormat: {
+    fontSize: 11,
+    color: COLORS.gray,
+    marginTop: 2,
+  },
   calendarContainer: {
     backgroundColor: COLORS.white,
     marginHorizontal: 20,
@@ -629,7 +717,7 @@ const styles = StyleSheet.create({
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    padding:0,
+    padding: 0,
   },
   emptyDay: {
     width: `${100 / 7}%`,
@@ -712,7 +800,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     marginHorizontal: 20,
     marginTop: 20,
-    marginBottom: 30,
     borderRadius: 15,
     padding: 20,
     elevation: 2,
@@ -748,5 +835,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: COLORS.primary,
+  },
+  availableMonthsCard: {
+    backgroundColor: COLORS.white,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 30,
+    borderRadius: 15,
+    padding: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  monthChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  monthChip: {
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.lightGray,
+  },
+  monthChipActive: {
+    backgroundColor: COLORS.secondary,
+    borderColor: COLORS.secondary,
+  },
+  monthChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.gray,
+  },
+  monthChipTextActive: {
+    color: COLORS.white,
   },
 });

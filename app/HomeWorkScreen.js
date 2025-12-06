@@ -193,8 +193,7 @@ export default function HomeworkScreen() {
 
   const handleFileOpen = (filename) => {
     if (!filename) return;
-
-    const fileUrl = `https://dpsmushkipur.com/bine/required/upload/${filename}`;
+    const fileUrl = `https://dpsmushkipur.com/bine/homework/${filename}`;
 
     if (isImageFile(filename)) {
       // Open image in modal

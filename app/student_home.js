@@ -11,12 +11,13 @@ import {
   Animated,
   Dimensions,
   Image,
+  Linking,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -29,6 +30,12 @@ const COLORS = {
   gray: '#757575',
   lightGray: '#E0E0E0',
   error: '#F44336',
+};
+
+// Base URL for attachments - adjust this based on your API
+const BASE_URL = 'https://dpsmushkipur.com/bine';
+const ATTACHMENT_PATHS = {
+  notice: '/homework/',    
 };
 
 const FEATURES = [
@@ -74,9 +81,9 @@ const FEATURES = [
   },
   {
     id: 'leave',
-    title: 'Leave Application',
+    title: 'Leave Applications',
     icon: 'document-text-outline',
-    route: '/StudentLeaveApply',
+    route: '/StudentLeaves',
     color: '#00BCD4',
     gradient: ['#00BCD4', '#4DD0E1'],
   },
@@ -106,9 +113,9 @@ const FEATURES = [
   },
   {
     id: 'complain',
-    title: 'Complain',
+    title: 'Complaints',
     icon: 'alert-circle-outline',
-    route: '/ComplaintScreen',
+    route: '/StudentComplaints',
     color: '#F44336',
     gradient: ['#F44336', '#E57373'],
   },
@@ -139,6 +146,7 @@ export default function StudentHomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [downloadingNoticeId, setDownloadingNoticeId] = useState(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
   const [hasMultipleStudents, setHasMultipleStudents] = useState(false);
   const [allStudents, setAllStudents] = useState([]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -317,61 +325,192 @@ export default function StudentHomeScreen() {
     });
   };
 
+  // ✅ FIXED: Improved download function with multiple path attempts
   const handleDownloadAttachment = async (noticeId, attachment, title) => {
-    if (!attachment) return;
+    if (!attachment) {
+      Alert.alert('Error', 'No attachment available');
+      return;
+    }
 
     setDownloadingNoticeId(noticeId);
+    setDownloadProgress(0);
 
     try {
-      const url = `https://dpsmushkipur.com/bine/required/upload/${attachment}`;
-      const fileExtension = attachment.split('.').pop();
-      const fileName = `${title.replace(/[^a-zA-Z0-9]/g, '_')}.${fileExtension}`;
+      // Clean the attachment filename
+      const cleanAttachment = attachment.trim();
+      
+      // Get file extension and create safe filename
+      const fileExtension = cleanAttachment.split('.').pop().toLowerCase();
+      const safeTitle = title.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_').substring(0, 50);
+      const fileName = `${safeTitle}_${Date.now()}.${fileExtension}`;
       const fileUri = FileSystem.documentDirectory + fileName;
 
-      console.log('Downloading from:', url);
+      console.log('Attachment filename:', cleanAttachment);
+      console.log('Target file:', fileUri);
 
-      const downloadResumable = FileSystem.createDownloadResumable(
-        url,
-        fileUri,
-        {},
-        (downloadProgress) => {
-          const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
-          console.log(`Download progress: ${Math.round(progress * 100)}%`);
-        }
-      );
+      // Try different possible URLs
+      const possibleUrls = [
+        `${BASE_URL}/homework/${cleanAttachment}`,
+      ].filter(Boolean); // Remove null values
 
-      const result = await downloadResumable.downloadAsync();
-      
-      if (result && result.uri) {
-        const fileInfo = await FileSystem.getInfoAsync(result.uri);
-        
-        if (fileInfo.exists && fileInfo.size > 0) {
-          const isAvailable = await Sharing.isAvailableAsync();
+      let downloadSuccessful = false;
+      let lastError = null;
+
+      for (const url of possibleUrls) {
+        try {
+          console.log('Trying URL:', url);
+
+          // First, check if the URL is accessible
+          const headResponse = await fetch(url, { method: 'HEAD' }).catch(() => null);
           
-          if (isAvailable) {
-            await Sharing.shareAsync(result.uri, {
-              dialogTitle: 'Open Notice Attachment',
-            });
-          } else {
-            Alert.alert(
-              'Success',
-              'Attachment downloaded successfully!',
-              [{ text: 'OK' }]
-            );
+          if (!headResponse || !headResponse.ok) {
+            console.log(`URL not accessible: ${url}`);
+            continue;
           }
-        } else {
-          throw new Error('Downloaded file is empty or corrupted');
+
+          console.log('URL accessible, starting download...');
+
+          const downloadResumable = FileSystem.createDownloadResumable(
+            url,
+            fileUri,
+            {
+              headers: {
+                'Accept': '*/*',
+              },
+            },
+            (progress) => {
+              if (progress.totalBytesExpectedToWrite > 0) {
+                const percent = Math.round(
+                  (progress.totalBytesWritten / progress.totalBytesExpectedToWrite) * 100
+                );
+                setDownloadProgress(percent);
+                console.log(`Download progress: ${percent}%`);
+              }
+            }
+          );
+
+          const result = await downloadResumable.downloadAsync();
+
+          if (result && result.uri) {
+            const fileInfo = await FileSystem.getInfoAsync(result.uri);
+            console.log('Downloaded file info:', fileInfo);
+
+            if (fileInfo.exists && fileInfo.size > 0) {
+              downloadSuccessful = true;
+              
+              // Share/Open the file
+              const sharingAvailable = await Sharing.isAvailableAsync();
+              
+              if (sharingAvailable) {
+                await Sharing.shareAsync(result.uri, {
+                  mimeType: getMimeType(fileExtension),
+                  dialogTitle: 'Open Attachment',
+                  UTI: getUTI(fileExtension),
+                });
+              } else {
+                // Fallback: Try to open with system
+                Alert.alert(
+                  'Download Complete',
+                  `File saved to: ${result.uri}`,
+                  [
+                    { text: 'OK' },
+                    {
+                      text: 'Open in Browser',
+                      onPress: () => Linking.openURL(url),
+                    },
+                  ]
+                );
+              }
+              break; // Exit loop on success
+            } else {
+              // Delete empty/corrupted file
+              await FileSystem.deleteAsync(result.uri, { idempotent: true });
+              throw new Error('Downloaded file is empty');
+            }
+          }
+        } catch (urlError) {
+          console.log(`Failed with URL ${url}:`, urlError.message);
+          lastError = urlError;
+          continue; // Try next URL
         }
       }
+
+      if (!downloadSuccessful) {
+        throw lastError || new Error('Could not download from any URL');
+      }
+
     } catch (error) {
       console.error('Download error:', error);
+      
+      // Offer to open in browser as fallback
       Alert.alert(
-        'Download Failed', 
-        'Failed to download attachment. Please try again.'
+        'Download Failed',
+        'Unable to download the attachment. Would you like to try opening it in your browser?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Open in Browser',
+            onPress: () => {
+              // Try the most likely URL
+              const browserUrl = `${BASE_URL}/homework/${attachment}`;
+              Linking.openURL(browserUrl).catch(() => {
+                Alert.alert('Error', 'Could not open browser');
+              });
+            },
+          },
+        ]
       );
     } finally {
       setDownloadingNoticeId(null);
+      setDownloadProgress(0);
     }
+  };
+
+  // Helper function to get MIME type
+  const getMimeType = (extension) => {
+    const mimeTypes = {
+      pdf: 'application/pdf',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      xls: 'application/vnd.ms-excel',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ppt: 'application/vnd.ms-powerpoint',
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      gif: 'image/gif',
+      txt: 'text/plain',
+      zip: 'application/zip',
+      mp3: 'audio/mpeg',
+      mp4: 'video/mp4',
+    };
+    return mimeTypes[extension.toLowerCase()] || 'application/octet-stream';
+  };
+
+  // Helper function to get UTI (for iOS)
+  const getUTI = (extension) => {
+    const utiTypes = {
+      pdf: 'com.adobe.pdf',
+      doc: 'com.microsoft.word.doc',
+      docx: 'org.openxmlformats.wordprocessingml.document',
+      jpg: 'public.jpeg',
+      jpeg: 'public.jpeg',
+      png: 'public.png',
+      txt: 'public.plain-text',
+    };
+    return utiTypes[extension.toLowerCase()] || 'public.data';
+  };
+
+  // Alternative download method - open directly in browser
+  const handleOpenInBrowser = (attachment) => {
+    if (!attachment) return;
+    
+    const url = `${BASE_URL}/notices/${attachment}`;
+    Linking.openURL(url).catch((err) => {
+      console.error('Failed to open URL:', err);
+      Alert.alert('Error', 'Could not open the attachment');
+    });
   };
 
   const stripHtmlTags = (html) => {
@@ -491,7 +630,7 @@ export default function StudentHomeScreen() {
                   style={styles.switchButton}
                   onPress={handleSwitchStudent}
                 >
-                  <Ionicons name="swap-horizontal" size={16} color={COLORS.accent} />
+                  <Ionicons name="swap-horizontal" size={16} color={COLORS.primary} />
                   <Text style={styles.switchButtonText}>Switch</Text>
                 </TouchableOpacity>
               )}
@@ -513,8 +652,8 @@ export default function StudentHomeScreen() {
             { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
           ]}
         >
-          <StatCard icon="cash-outline" value={`₹${student.total_paid}`} label="Total Paid" />
-          <StatCard icon="alert-circle-outline" value={`₹${student.current_dues}`} label="Current Dues" />
+          <StatCard icon="cash-outline" value={`₹${student.total_paid || 0}`} label="Total Paid" />
+          <StatCard icon="alert-circle-outline" value={`₹${student.current_dues || 0}`} label="Current Dues" />
           <StatCard icon="trophy-outline" value="A+" label="Last Exam" />
         </Animated.View>
       </LinearGradient>
@@ -533,12 +672,12 @@ export default function StudentHomeScreen() {
         }
       >
         {/* Error Banner */}
-        {error && (
+        {error ? (
           <View style={styles.errorBanner}>
             <Ionicons name="alert-circle" size={16} color={COLORS.error} />
             <Text style={styles.errorBannerText}>{error}</Text>
           </View>
-        )}
+        ) : null}
 
         {/* Student Info Card */}
         <View style={styles.infoCard}>
@@ -602,7 +741,9 @@ export default function StudentHomeScreen() {
                 key={notice.id}
                 notice={notice}
                 onDownload={handleDownloadAttachment}
+                onOpenInBrowser={handleOpenInBrowser}
                 isDownloading={downloadingNoticeId === notice.id}
+                downloadProgress={downloadingNoticeId === notice.id ? downloadProgress : 0}
                 formatDate={formatDate}
                 stripHtmlTags={stripHtmlTags}
               />
@@ -675,13 +816,45 @@ function FeatureCard({ feature, index, onPress, fadeAnim }) {
   );
 }
 
-function NoticeCard({ notice, onDownload, isDownloading, formatDate, stripHtmlTags }) {
+// ✅ Updated NoticeCard with better download UI
+function NoticeCard({ 
+  notice, 
+  onDownload, 
+  onOpenInBrowser,
+  isDownloading, 
+  downloadProgress,
+  formatDate, 
+  stripHtmlTags 
+}) {
   const [expanded, setExpanded] = useState(false);
-  const hasAttachment = notice.notice_attachment && notice.notice_attachment !== '';
+  const hasAttachment = notice.notice_attachment && notice.notice_attachment.trim() !== '';
   const description = stripHtmlTags(notice.notice_details);
   const shortDescription = description.length > 100 
     ? description.substring(0, 100) + '...' 
     : description;
+
+  // Get file extension for icon
+  const getFileIcon = (filename) => {
+    if (!filename) return 'document-outline';
+    const ext = filename.split('.').pop().toLowerCase();
+    switch (ext) {
+      case 'pdf': return 'document-text';
+      case 'doc':
+      case 'docx': return 'document';
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif': return 'image';
+      case 'mp4':
+      case 'avi':
+      case 'mov': return 'videocam';
+      case 'mp3':
+      case 'wav': return 'musical-notes';
+      case 'zip':
+      case 'rar': return 'archive';
+      default: return 'document-outline';
+    }
+  };
 
   return (
     <View style={styles.noticeCard}>
@@ -713,23 +886,67 @@ function NoticeCard({ notice, onDownload, isDownloading, formatDate, stripHtmlTa
       )}
 
       {hasAttachment && (
-        <TouchableOpacity
-          style={styles.downloadButton}
-          onPress={() => onDownload(notice.id, notice.notice_attachment, notice.notice_title)}
-          disabled={isDownloading}
-        >
-          {isDownloading ? (
-            <>
-              <ActivityIndicator size="small" color={COLORS.white} />
-              <Text style={styles.downloadButtonText}>Downloading...</Text>
-            </>
-          ) : (
-            <>
-              <Ionicons name="download-outline" size={18} color={COLORS.white} />
-              <Text style={styles.downloadButtonText}>Download Attachment</Text>
-            </>
+        <View style={styles.attachmentContainer}>
+          {/* Attachment Info */}
+          <View style={styles.attachmentInfo}>
+            <Ionicons 
+              name={getFileIcon(notice.notice_attachment)} 
+              size={20} 
+              color={COLORS.secondary} 
+            />
+            <Text style={styles.attachmentName} numberOfLines={1}>
+              {notice.notice_attachment}
+            </Text>
+          </View>
+
+          {/* Download Buttons */}
+          <View style={styles.attachmentButtons}>
+            {/* Download Button */}
+            {/*<TouchableOpacity
+              style={[
+                styles.downloadButton,
+                isDownloading && styles.downloadButtonDisabled
+              ]}
+              onPress={() => onDownload(notice.id, notice.notice_attachment, notice.notice_title)}
+              disabled={isDownloading}
+            >
+              {isDownloading ? (
+                <View style={styles.downloadingContainer}>
+                  <ActivityIndicator size="small" color={COLORS.white} />
+                  <Text style={styles.downloadButtonText}>
+                    {downloadProgress > 0 ? `${downloadProgress}%` : 'Downloading...'}
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <Ionicons name="download-outline" size={18} color={COLORS.white} />
+                  <Text style={styles.downloadButtonText}>Download</Text>
+                </>
+              )}
+            </TouchableOpacity> */}
+
+            {/* Open in Browser Button (fallback) */}
+            <TouchableOpacity
+              style={styles.browserButton}
+              onPress={() => onOpenInBrowser(notice.notice_attachment)}
+              disabled={isDownloading}
+            >
+              <Ionicons name="open-outline" size={18} color={COLORS.secondary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Progress Bar */}
+          {isDownloading && downloadProgress > 0 && (
+            <View style={styles.progressBarContainer}>
+              <View 
+                style={[
+                  styles.progressBar, 
+                  { width: `${downloadProgress}%` }
+                ]} 
+              />
+            </View>
           )}
-        </TouchableOpacity>
+        </View>
       )}
     </View>
   );
@@ -843,7 +1060,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
-    
   },
   profileImage: {
     width: 60,
@@ -863,26 +1079,46 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     flexDirection: 'row',
-    marginTop: 8,
+    marginTop: 10,
     gap: 8,
   },
   switchButton: {
-    backgroundColor: 'rgba(255, 193, 7, 0.3)',
-    borderRadius: 15,
-    padding: 6,
-    width: 26,
-    height: 26,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  switchButtonText: {
+    color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: '600',
   },
   logoutButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 15,
-    padding: 6,
-    width: 26,
-    height: 26,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(244, 67, 54, 0.9)',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  logoutButtonText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: '600',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -1059,7 +1295,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 8,
   },
+  // ✅ New attachment styles
+  attachmentContainer: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 10,
+  },
+  attachmentInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 8,
+  },
+  attachmentName: {
+    flex: 1,
+    fontSize: 12,
+    color: COLORS.gray,
+  },
+  attachmentButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   downloadButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1067,13 +1326,42 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: 10,
-    marginTop: 12,
+    gap: 8,
+  },
+  downloadButtonDisabled: {
+    backgroundColor: COLORS.gray,
+  },
+  downloadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   downloadButtonText: {
     color: COLORS.white,
     fontSize: 14,
     fontWeight: '600',
+  },
+  browserButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+  },
+  progressBarContainer: {
+    height: 4,
+    backgroundColor: COLORS.lightGray,
+    borderRadius: 2,
+    marginTop: 10,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: COLORS.secondary,
+    borderRadius: 2,
   },
   noNoticesContainer: {
     alignItems: 'center',
@@ -1083,48 +1371,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.gray,
     marginTop: 10,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    marginTop: 10,
-    gap: 8,
-  },
-  switchButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    gap: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  switchButtonText: {
-    color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(244, 67, 54, 0.9)',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    gap: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  logoutButtonText: {
-    color: COLORS.white,
-    fontSize: 12,
-    fontWeight: '600',
   },
 });
