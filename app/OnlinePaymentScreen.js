@@ -1,424 +1,581 @@
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { FontAwesome5 } from "@expo/vector-icons";
+import axios from "axios";
+import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useMemo, useState } from "react";
 import {
-    Animated,
-    Dimensions,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  Linking,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 
-const { width, height } = Dimensions.get('window');
-
-const COLORS = {
-  primary: '#1B5E20',
-  secondary: '#4CAF50',
-  accent: '#FFC107',
-  white: '#FFFFFF',
-  gray: '#757575',
-  lightGray: '#E0E0E0',
-};
+const { width } = Dimensions.get("window");
 
 export default function OnlinePaymentScreen() {
   const router = useRouter();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const params = useLocalSearchParams();
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  useEffect(() => {
-    // Fade in animation
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 5,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
+  // ✅ Generate transaction ID once
+  const transactionId = useMemo(
+    () => params.transaction_id || `TXN${Date.now()}${Math.floor(Math.random() * 10000)}`,
+    [params.transaction_id]
+  );
 
-    // Continuous rotation animation for icon
-    Animated.loop(
-      Animated.timing(rotateAnim, {
-        toValue: 1,
-        duration: 3000,
-        useNativeDriver: true,
-      })
-    ).start();
+  // ✅ Parse payment details once
+  const paymentDetails = useMemo(() => {
+    try {
+      const details = {
+        studentId: params.student_id,
+        studentName: params.student_name,
+        studentClass: params.student_class || "",
+        studentSection: params.student_section || "",
+        selectedMonths: JSON.parse(params.selectedMonths || "[]"),
+        totalAmount: parseFloat(params.totalAmount || 0),
+        transactionId: transactionId,
+      };
 
-    // Pulse animation
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
+      console.log("✅ Payment Details Initialized:", details);
+      return details;
+    } catch (error) {
+      console.error("❌ Error parsing payment details:", error);
+      Alert.alert("Error", "Invalid payment details");
+      router.back();
+      return null;
+    }
+  }, [
+    params.student_id,
+    params.student_name,
+    params.student_class,
+    params.student_section,
+    params.selectedMonths,
+    params.totalAmount,
+    transactionId,
+  ]);
 
-  const spin = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
+  const handlePhonePePayment = async () => {
+    if (!paymentDetails) {
+      Alert.alert("Error", "Payment details not loaded");
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsProcessing(true);
+
+    try {
+      const paymentPayload = {
+        student_id: paymentDetails.studentId,
+        student_name: paymentDetails.studentName,
+        amount: paymentDetails.totalAmount,
+        transaction_id: paymentDetails.transactionId,
+        selected_months: paymentDetails.selectedMonths,
+        payment_method: "PhonePe",
+      };
+
+      console.log("📤 Sending Payment Request:", paymentPayload);
+
+      const response = await axios.post(
+        "https://dpsmushkipur.com/bine/api.php?task=initiate_phonepe_payment",
+        paymentPayload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          timeout: 30000,
+        }
+      );
+
+      console.log("📥 API Response:", response.data);
+
+      if (response.data && response.data.success === true) {
+        const paymentUrl = response.data.payment_url || response.data.url;
+        const merchantTransactionId =
+          response.data.merchant_transaction_id ||
+          response.data.merchantTransactionId;
+
+        console.log("✅ Payment URL:", paymentUrl);
+        console.log("✅ Merchant Transaction ID:", merchantTransactionId);
+
+        if (!paymentUrl) {
+          throw new Error("Payment URL not received from server");
+        }
+
+        const canOpen = await Linking.canOpenURL(paymentUrl);
+
+        if (canOpen) {
+          await Linking.openURL(paymentUrl);
+
+          Alert.alert(
+            "Payment Initiated",
+            "You will be redirected to PhonePe to complete the payment.",
+            [
+              {
+                text: "OK",
+                onPress: () => {
+                  router.replace({
+                    pathname: "/PaymentStatusScreen",
+                    params: {
+                      transaction_id:
+                        merchantTransactionId || paymentDetails.transactionId,
+                      student_id: paymentDetails.studentId,
+                      student_name: paymentDetails.studentName,
+                      amount: paymentDetails.totalAmount,
+                    },
+                  });
+                },
+              },
+            ]
+          );
+        } else {
+          throw new Error("Cannot open payment URL");
+        }
+      } else {
+        const errorMessage =
+          response.data?.message ||
+          response.data?.error ||
+          "Payment initiation failed. Please try again.";
+
+        console.error("❌ API Error:", errorMessage);
+        console.error("❌ Full Response:", JSON.stringify(response.data));
+
+        throw new Error(errorMessage);
+      }
+    } catch (error) {
+      console.error("❌ PhonePe Payment Error:", error);
+
+      let errorMessage = "Payment initiation failed. Please try again.";
+
+      if (error.response) {
+        console.error("Server Error Response:", error.response.data);
+        errorMessage =
+          error.response.data?.message ||
+          error.response.data?.error ||
+          `Server Error: ${error.response.status}`;
+      } else if (error.request) {
+        console.error("No Response from Server");
+        errorMessage =
+          "Cannot connect to payment server. Please check your internet connection.";
+      } else {
+        errorMessage = error.message || errorMessage;
+      }
+
+      Alert.alert(
+        "Payment Failed",
+        errorMessage,
+        [
+          {
+            text: "Retry",
+            onPress: () => handlePhonePePayment(),
+          },
+          {
+            text: "Cancel",
+            style: "cancel",
+            onPress: () => router.back(),
+          },
+        ],
+        { cancelable: false }
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleOfflinePayment = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    Alert.alert(
+      "Offline Payment",
+      "Please visit the school office to complete the payment.",
+      [
+        {
+          text: "OK",
+          onPress: () => router.back(),
+        },
+      ]
+    );
+  };
+
+  if (!paymentDetails) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1e3c72" />
+          <Text style={styles.loadingText}>Loading payment details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaProvider>
-      <LinearGradient
-        colors={[COLORS.primary, COLORS.secondary]}
-        style={styles.container}
-      >
-        {/* Header */}
-        <View style={styles.header}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#1e3c72" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <LinearGradient
+          colors={["#1e3c72", "#2a5298"]}
+          style={styles.headerGradient}
+        />
+        <View style={styles.headerContent}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
-            activeOpacity={0.7}
+            disabled={isProcessing}
           >
-            <Ionicons name="arrow-back" size={24} color={COLORS.white} />
+            <FontAwesome5 name="arrow-left" size={20} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Online Payment</Text>
-          <View style={styles.backButton} />
+          <Text style={styles.headerTitle}>Payment Method</Text>
+          <View style={{ width: 40 }} />
         </View>
+      </View>
 
-        {/* Content */}
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Payment Summary Card */}
         <Animated.View
-          style={[
-            styles.content,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
+          entering={FadeInUp.delay(200).springify()}
+          style={styles.summaryCard}
         >
-          {/* Animated Icon Container */}
-          <Animated.View
-            style={[
-              styles.iconContainer,
-              { transform: [{ scale: pulseAnim }] },
-            ]}
-          >
-            <View style={styles.iconCircle}>
-              <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                <Ionicons name="card-outline" size={80} color={COLORS.accent} />
-              </Animated.View>
+          <Text style={styles.summaryTitle}>Payment Summary</Text>
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Student Name</Text>
+            <Text style={styles.summaryValue}>{paymentDetails.studentName}</Text>
+          </View>
+
+          {paymentDetails.studentClass && (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Class</Text>
+              <Text style={styles.summaryValue}>
+                {paymentDetails.studentClass}
+                {paymentDetails.studentSection && `-${paymentDetails.studentSection}`}
+              </Text>
             </View>
-            {/* Decorative circles */}
-            <View style={[styles.decorativeCircle, styles.circle1]} />
-            <View style={[styles.decorativeCircle, styles.circle2]} />
-            <View style={[styles.decorativeCircle, styles.circle3]} />
-          </Animated.View>
+          )}
 
-          {/* Coming Soon Badge */}
-          <View style={styles.badge}>
-            <LinearGradient
-              colors={[COLORS.accent, '#FFD54F']}
-              style={styles.badgeGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Ionicons name="time-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.badgeText}>Coming Soon</Text>
-            </LinearGradient>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Transaction ID</Text>
+            <Text style={styles.summaryValueSmall}>
+              {paymentDetails.transactionId}
+            </Text>
           </View>
 
-          {/* Title */}
-          <Text style={styles.title}>Online Payment</Text>
+          <View style={styles.divider} />
 
-          {/* Description */}
-          <Text style={styles.description}>
-            We're working hard to bring you a secure and convenient online payment experience.
-          </Text>
-
-          {/* Feature List */}
-          <View style={styles.featureList}>
-            <FeatureItem
-              icon="shield-checkmark"
-              text="Secure Payment Gateway"
-              delay={0}
-            />
-            <FeatureItem
-              icon="flash"
-              text="Quick & Easy Transactions"
-              delay={100}
-            />
-            <FeatureItem
-              icon="card"
-              text="Multiple Payment Options"
-              delay={200}
-            />
-            <FeatureItem
-              icon="receipt"
-              text="Instant Payment Receipt"
-              delay={300}
-            />
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Selected Months</Text>
+            <Text style={styles.summaryValue}>
+              {paymentDetails.selectedMonths.length}
+            </Text>
           </View>
 
-          {/* Info Box */}
-          <View style={styles.infoBox}>
-            <Ionicons
-              name="information-circle-outline"
-              size={20}
-              color={COLORS.accent}
-            />
-            <Text style={styles.infoText}>
-              This feature will be available soon. We'll notify you once it's ready!
+          <View style={styles.monthsList}>
+            {paymentDetails.selectedMonths.map((month, index) => (
+              <View key={index} style={styles.monthChip}>
+                <Text style={styles.monthChipText}>{month}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Total Amount</Text>
+            <Text style={styles.totalAmount}>
+              ₹{paymentDetails.totalAmount.toLocaleString()}
             </Text>
           </View>
         </Animated.View>
 
-        {/* Bottom Action */}
-        <View style={styles.bottomAction}>
+        {/* Payment Methods */}
+        <Text style={styles.sectionTitle}>Select Payment Method</Text>
+
+        {/* PhonePe Option */}
+        <Animated.View entering={FadeInDown.delay(300).springify()}>
           <TouchableOpacity
-            style={styles.notifyButton}
-            activeOpacity={0.8}
-            onPress={() => {
-              // Handle notification subscription
-              alert('You will be notified when this feature is available!');
-            }}
+            style={styles.paymentMethodCard}
+            onPress={handlePhonePePayment}
+            disabled={isProcessing}
+            activeOpacity={0.7}
           >
-            <LinearGradient
-              colors={[COLORS.accent, '#FFD54F']}
-              style={styles.notifyButtonGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <Ionicons name="notifications" size={20} color={COLORS.primary} />
-              <Text style={styles.notifyButtonText}>Notify Me</Text>
-            </LinearGradient>
+            <View style={styles.paymentMethodContent}>
+              <View style={styles.paymentMethodIcon}>
+                <Image
+                  source={{
+                    uri: "https://cdn.icon-icons.com/icons2/2699/PNG/512/phonepe_logo_icon_169316.png",
+                  }}
+                  style={styles.phonePeIcon}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={styles.paymentMethodInfo}>
+                <Text style={styles.paymentMethodTitle}>PhonePe</Text>
+                <Text style={styles.paymentMethodSubtitle}>
+                  Pay securely with PhonePe UPI
+                </Text>
+              </View>
+              {isProcessing ? (
+                <ActivityIndicator size="small" color="#5f259f" />
+              ) : (
+                <FontAwesome5 name="chevron-right" size={16} color="#bdc3c7" />
+              )}
+            </View>
           </TouchableOpacity>
-        </View>
-      </LinearGradient>
-    </SafeAreaProvider>
-  );
-}
+        </Animated.View>
 
-function FeatureItem({ icon, text, delay }) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
+        {/* Offline Payment Option */}
+        <Animated.View entering={FadeInDown.delay(400).springify()}>
+          <TouchableOpacity
+            style={styles.paymentMethodCard}
+            onPress={handleOfflinePayment}
+            disabled={isProcessing}
+            activeOpacity={0.7}
+          >
+            <View style={styles.paymentMethodContent}>
+              <View
+                style={[
+                  styles.paymentMethodIcon,
+                  { backgroundColor: "#e3f2fd" },
+                ]}
+              >
+                <FontAwesome5 name="university" size={24} color="#2196f3" />
+              </View>
+              <View style={styles.paymentMethodInfo}>
+                <Text style={styles.paymentMethodTitle}>Pay at School</Text>
+                <Text style={styles.paymentMethodSubtitle}>
+                  Visit school office for offline payment
+                </Text>
+              </View>
+              <FontAwesome5 name="chevron-right" size={16} color="#bdc3c7" />
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        delay: delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        delay: delay,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+        {/* Info Banner */}
+        <Animated.View
+          entering={FadeInDown.delay(500).springify()}
+          style={styles.infoBanner}
+        >
+          <FontAwesome5
+            name="shield-alt"
+            size={16}
+            color="#4caf50"
+            style={{ marginRight: 8 }}
+          />
+          <Text style={styles.infoBannerText}>
+            Your payment is secure and encrypted
+          </Text>
+        </Animated.View>
 
-  return (
-    <Animated.View
-      style={[
-        styles.featureItem,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateX: slideAnim }],
-        },
-      ]}
-    >
-      <View style={styles.featureIconContainer}>
-        <Ionicons name={icon} size={20} color={COLORS.accent} />
-      </View>
-      <Text style={styles.featureText}>{text}</Text>
-    </Animated.View>
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#f8f9fa",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    height: 100,
+    overflow: "hidden",
+  },
+  headerGradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 100,
+  },
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    paddingTop: 20,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.white,
+    fontWeight: "bold",
+    color: "#ffffff",
   },
-  content: {
+  loadingContainer: {
     flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 30,
-    paddingTop: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  iconContainer: {
-    position: 'relative',
-    marginBottom: 30,
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#7f8c8d",
   },
-  iconCircle: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: 'rgba(255, 193, 7, 0.3)',
+  scrollContainer: {
+    flex: 1,
   },
-  decorativeCircle: {
-    position: 'absolute',
-    backgroundColor: 'rgba(255, 193, 7, 0.2)',
-    borderRadius: 100,
+  contentContainer: {
+    padding: 20,
   },
-  circle1: {
-    width: 40,
-    height: 40,
-    top: -10,
-    right: 10,
+  summaryCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  circle2: {
+  summaryTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#2c3e50",
+    marginBottom: 16,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: "#7f8c8d",
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2c3e50",
+  },
+  summaryValueSmall: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#2c3e50",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#ecf0f1",
+    marginVertical: 12,
+  },
+  monthsList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 8,
+  },
+  monthChip: {
+    backgroundColor: "#e3f2fd",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  monthChipText: {
+    fontSize: 12,
+    color: "#1976d2",
+    fontWeight: "500",
+  },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#2c3e50",
+  },
+  totalAmount: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#27ae60",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#2c3e50",
+    marginBottom: 16,
+  },
+  paymentMethodCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  paymentMethodContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+  },
+  paymentMethodIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#f3e5f5",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  phonePeIcon: {
     width: 30,
     height: 30,
-    bottom: 20,
-    left: -10,
   },
-  circle3: {
-    width: 25,
-    height: 25,
-    top: 30,
-    left: -15,
-  },
-  badge: {
-    marginBottom: 20,
-    borderRadius: 25,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  badgeGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  badgeText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: COLORS.white,
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  description: {
-    fontSize: 16,
-    color: COLORS.white,
-    textAlign: 'center',
-    opacity: 0.9,
-    lineHeight: 24,
-    marginBottom: 30,
-  },
-  featureList: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.accent,
-  },
-  featureIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 193, 7, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  featureText: {
-    fontSize: 14,
-    color: COLORS.white,
-    fontWeight: '600',
+  paymentMethodInfo: {
     flex: 1,
   },
-  infoBox: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 193, 7, 0.2)',
-    borderRadius: 12,
-    padding: 15,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 193, 7, 0.4)',
+  paymentMethodTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#2c3e50",
+    marginBottom: 4,
   },
-  infoText: {
-    flex: 1,
+  paymentMethodSubtitle: {
     fontSize: 13,
-    color: COLORS.white,
-    lineHeight: 20,
+    color: "#7f8c8d",
   },
-  bottomAction: {
-    paddingHorizontal: 30,
-    paddingBottom: 40,
+  infoBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e8f5e9",
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
   },
-  notifyButton: {
-    borderRadius: 30,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  notifyButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 10,
-  },
-  notifyButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.primary,
+  infoBannerText: {
+    fontSize: 13,
+    color: "#2e7d32",
+    fontWeight: "500",
   },
 });

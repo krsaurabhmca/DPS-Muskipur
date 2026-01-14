@@ -91,7 +91,7 @@ const FEATURES = [
     id: 'payment',
     title: 'Online Payment',
     icon: 'card-outline',
-    route: '/OnlinePaymentScreen',
+    route: '/StudentFeeScreen',
     color: '#8BC34A',
     gradient: ['#8BC34A', '#AED581'],
   },

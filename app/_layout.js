@@ -79,6 +79,9 @@ export default function RootLayout() {
         <Stack.Screen name="DuesList" options={{ headerShown: false }} />
         <Stack.Screen name="Notice" options={{ headerShown: false }} />
         <Stack.Screen name="HomeWork" options={{ headerShown: false }} />
+        <Stack.Screen name="OnlinePaymentScreen" options={{ headerShown: false }} />
+        <Stack.Screen name="StudentFeeScreen" options={{ headerShown: false }} />
+        <Stack.Screen name="StudentPayFeeScreen" options={{ headerShown: false }} />
       </Stack>
     </SafeAreaProvider>
   );
