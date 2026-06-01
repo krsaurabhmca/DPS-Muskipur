@@ -1,0 +1,14 @@
+id,area_name,area_fee
+1,N Pipra,800
+2,Allapur,800
+5,Babu Hata,800
+9,Badheya,800
+
+
+,READ THIS INSTRUCTION TO IMPORT DATA,
+,Remove All Dummy Data and clean this sheet except 1st row,
+,Don't Change the ID In case of change or update,
+,"Don’t Use Special Chrecter in Data like  (',.&*|/\~""_-+{}[])",
+,Enter a void value in concern field,
+,"In special cndition you may use(,-_.)",
+All Date must be in (YYYY-mm-dd) format

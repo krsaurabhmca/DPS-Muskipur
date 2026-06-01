@@ -1,0 +1,3 @@
+[Thu 2023-03-16 11:51:14 PM] [client 157.35.60.22] by  alter table receipt add column special_drive_fee float(12,2)  DEFAULT 0.00
+[Thu 2023-03-16 11:51:14 PM] [client 157.35.60.22] by  alter table fee_details add column special_drive_fee float(12,2) DEFAULT 0.00
+[Thu 2023-03-16 11:51:14 PM] [client 157.35.60.22] by  alter table student add column special_drive_fee varchar(25) DEFAULT NULL

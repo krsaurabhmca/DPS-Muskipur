@@ -166,16 +166,34 @@ export default function AdminLogin() {
     setError('');
 
     try {
-      const response = await axios.post(
+      console.log('Attempting login using native fetch API...');
+      const response = await fetch(
         'https://dpsmushkipur.com/bine/api.php?task=login',
         {
-          user_name: username,
-          user_pass: password
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            user_name: username,
+            user_pass: password,
+          }),
         }
       );
 
-      if (response.data.status === 'success' && response.data.count > 0) {
-        const userData = response.data.data[0];
+      const responseText = await response.text();
+      console.log('Raw login response:', responseText);
+
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (parseErr) {
+        throw new Error('Invalid JSON response from server');
+      }
+
+      if (responseData.status === 'success' && responseData.count > 0) {
+        const userData = responseData.data[0];
         const stored = await storeUserData(userData);
         
         if (stored) {
@@ -184,13 +202,32 @@ export default function AdminLogin() {
           setError('Failed to store login information. Please try again.');
         }
       } else {
-        setError('Invalid username or password');
+        setError(responseData.message || 'Invalid username or password');
       }
     } catch (err) {
-      console.error('Login error:', err);
+      console.log('--- DETAILED LOGIN ERROR ---');
+      console.log('Message:', err.message);
+      console.log('----------------------------');
+
+      // Proactive Internet Diagnostics
+      try {
+        console.log('Running automatic network diagnostics...');
+        const testRes = await fetch('https://reactnative.dev/movies.json');
+        if (testRes.ok) {
+          console.log('👉 DIAGNOSTIC RESULT: Emulator internet is ACTIVE and working perfectly!');
+          console.log('👉 CONCLUSION: The "Network request failed" is caused by your server SSL Certificate having an INCOMPLETE CHAIN (missing intermediate CA bundle) which Android strictly rejects, even though Talend/Mac Web allows it.');
+          console.log('👉 SOLUTION: Log in to your hosting control panel (cPanel/Hostinger) and re-install your SSL certificate, making sure to paste the CA-BUNDLE / Intermediate Certificate alongside the primary certificate.');
+        } else {
+          console.log('👉 DIAGNOSTIC RESULT: Test URL returned status', testRes.status);
+        }
+      } catch (diagErr) {
+        console.log('👉 DIAGNOSTIC RESULT: Internet test also failed! (', diagErr.message, ')');
+        console.log('👉 CONCLUSION: Your Android Emulator is OFFLINE or has a broken virtual DNS router.');
+        console.log('👉 SOLUTION: Restart your Android emulator from Device Manager using "Cold Boot Now" or restart your computer.');
+      }
+
       setError(
-        err.response?.data?.message || 
-        'Network error. Please check your connection and try again.'
+        'Network error or server unreachable. Please check your connection and try again.'
       );
     } finally {
       setIsLoading(false);

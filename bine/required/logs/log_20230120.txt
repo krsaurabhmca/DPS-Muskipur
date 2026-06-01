@@ -1,0 +1,2 @@
+[Fri 2023-01-20 10:29:47 PM] [client 157.35.17.90] by  delete from enquiry WHERE id  ='15'
+[Fri 2023-01-20 10:29:51 PM] [client 157.35.17.90] by  delete from enquiry WHERE id  ='12'

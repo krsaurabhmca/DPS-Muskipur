@@ -2,6 +2,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -68,6 +69,7 @@ export default function AttendanceScreen() {
   const [attendance, setAttendance] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditMode, setIsEditMode] = useState(true); // Start in edit mode
+  const [attendanceMarked, setAttendanceMarked] = useState(false);
   
   // Summary state
   const [summary, setSummary] = useState({
@@ -81,10 +83,66 @@ export default function AttendanceScreen() {
   const [showOnlyAbsent, setShowOnlyAbsent] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
   
+  // Role & Assignments states
+  const [userRole, setUserRole] = useState('ADMIN');
+  const [assignments, setAssignments] = useState([]);
+
+  useEffect(() => {
+    loadUserRoleAndAssignments();
+  }, []);
+
+  const loadUserRoleAndAssignments = async () => {
+    try {
+      const role = await AsyncStorage.getItem('user_type');
+      const uId = await AsyncStorage.getItem('user_id');
+      setUserRole(role || 'TEACHER');
+      
+      if (role === 'TEACHER' || role === 'STAFF') {
+        const response = await axios.post('https://dpsmushkipur.com/bine/api.php?task=get_teacher_assignments', {
+          user_id: uId
+        });
+        if (response.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
+          const teacherAssigns = response.data.data;
+          setAssignments(teacherAssigns);
+          
+          // Pre-select first assigned class & section
+          setSelectedClass(teacherAssigns[0].student_class);
+          setSelectedSection(teacherAssigns[0].student_section);
+        } else {
+          Alert.alert('No Assignments', 'No active class assignments found for your teacher account.');
+        }
+      }
+    } catch (e) {
+      console.error('Error loading role and assignments:', e);
+    }
+  };
+
+  const getDynamicClassOptions = () => {
+    const isAdmin = userRole === 'ADMIN' || userRole === 'DBA' || userRole === 'DEV';
+    if (isAdmin) return CLASS_OPTIONS;
+    
+    // Unique classes from assignments
+    const uniqueClasses = Array.from(new Set(assignments.map(a => a.student_class)));
+    return uniqueClasses.map(c => ({ label: c, value: c }));
+  };
+
+  const getDynamicSectionOptions = () => {
+    const isAdmin = userRole === 'ADMIN' || userRole === 'DBA' || userRole === 'DEV';
+    if (isAdmin) return SECTION_OPTIONS;
+    
+    // Unique sections for currently selected class from assignments
+    const uniqueSections = Array.from(new Set(
+      assignments
+        .filter(a => a.student_class === selectedClass)
+        .map(a => a.student_section)
+    ));
+    return uniqueSections.map(s => ({ label: `Section ${s}`, value: s }));
+  };
+  
   // Effects for handling class/section changes and fetching students
   useEffect(() => {
     fetchStudents();
-  }, [selectedClass, selectedSection]);
+  }, [selectedClass, selectedSection, selectedDate]);
   
   // Effect for filtering students based on search and attendance
   useEffect(() => {
@@ -103,26 +161,33 @@ export default function AttendanceScreen() {
         'https://dpsmushkipur.com/bine/api.php?task=student_list',
         {
           student_class: selectedClass,
-          student_section: selectedSection
+          student_section: selectedSection,
+          att_date: selectedDate.toISOString().split('T')[0]
         }
       );
       
       if (response.data.status === 'success') {
-        // Initialize students with attendance status (default to present)
+        const isMarked = response.data.attendance_marked;
+        setAttendanceMarked(isMarked);
+        
+        // Initialize students with attendance status (default to present if not marked)
         const studentsWithStatus = response.data.data.map(student => ({
           ...student,
-          isPresent: true // Default to present
+          isPresent: isMarked ? (student.status === 'P' || student.status === null) : true
         }));
         
         setStudents(studentsWithStatus);
         
-        // Initialize attendance object for all students (present by default)
+        // Initialize attendance object for all students
         const newAttendance = {};
         studentsWithStatus.forEach(student => {
-          newAttendance[student.id] = true;
+          newAttendance[student.id] = student.isPresent;
         });
         
         setAttendance(newAttendance);
+        
+        // If marked, start in view mode (isEditMode = false), else start in edit mode
+        setIsEditMode(!isMarked);
       } else {
         Alert.alert('Error', 'Failed to load student list');
       }
@@ -257,6 +322,7 @@ export default function AttendanceScreen() {
         
         // Set edit mode to false after submission
         setIsEditMode(false);
+        setAttendanceMarked(true);
       } else {
         throw new Error("Invalid response from server");
       }
@@ -508,8 +574,8 @@ export default function AttendanceScreen() {
         </View>
       )}
       
-      {/* Submit Button */}
-      {isEditMode && (
+      {/* Submit Button or Attendance Marked Status Indicator */}
+      {isEditMode ? (
         <View style={styles.submitButtonContainer}>
           <TouchableOpacity 
             style={styles.submitButton}
@@ -523,6 +589,15 @@ export default function AttendanceScreen() {
             )}
           </TouchableOpacity>
         </View>
+      ) : (
+        attendanceMarked && (
+          <View style={styles.submitButtonContainer}>
+            <View style={[styles.submitButton, { backgroundColor: '#388E3C', flexDirection: 'row', gap: 8 }]}>
+              <FontAwesome5 name="check-double" size={16} color="#ffffff" />
+              <Text style={styles.submitButtonText}>Attendance Marked</Text>
+            </View>
+          </View>
+        )
       )}
       
       {/* Class Selection Modal */}
@@ -542,7 +617,7 @@ export default function AttendanceScreen() {
             </View>
             
             <View style={styles.modalContent}>
-              {CLASS_OPTIONS.map(option => (
+              {getDynamicClassOptions().map(option => (
                 <TouchableOpacity 
                   key={option.value}
                   style={[
@@ -587,7 +662,7 @@ export default function AttendanceScreen() {
             </View>
             
             <View style={styles.modalContent}>
-              {SECTION_OPTIONS.map(option => (
+              {getDynamicSectionOptions().map(option => (
                 <TouchableOpacity 
                   key={option.value}
                   style={[

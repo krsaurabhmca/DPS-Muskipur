@@ -1,0 +1,5 @@
+[Sat 2023-02-04 02:55:55 PM] [client 157.42.198.56] by  delete from enquiry WHERE id  ='16'
+[Sat 2023-02-04 03:48:22 PM] [client 157.42.198.56] by  UPDATE employee_att SET d_4 = 'P', status = 'ACTIVE' WHERE emp_id = '1'and att_month = 'feb_2023'
+[Sat 2023-02-04 03:48:22 PM] [client 157.42.198.56] by  UPDATE employee_att SET d_4 = 'P', status = 'ACTIVE' WHERE emp_id = '128'and att_month = 'feb_2023'
+[Sat 2023-02-04 03:48:22 PM] [client 157.42.198.56] by  UPDATE employee_att SET d_4 = 'P', status = 'ACTIVE' WHERE emp_id = '13'and att_month = 'feb_2023'
+[Sat 2023-02-04 03:48:22 PM] [client 157.42.198.56] by  UPDATE employee_att SET d_4 = 'P', status = 'ACTIVE' WHERE emp_id = '110'and att_month = 'feb_2023'

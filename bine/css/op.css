@@ -1,0 +1,45 @@
+/*-------OFFERPLANT CUSTOM CSS FOR BINE PRO 2.0---------*/
+.content {
+    min-height: 250px;
+    padding: 20px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+label.error {
+    color: #ff0044;
+    font-size: 11px;
+}
+
+.delete_btn {
+    cursor: pointer;
+}
+
+
+/* width */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: #e4a82;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #888;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* .treeview-menu > li > a {
+  color: #1cfb05!important;
+} */
+
+.skin-yellow .sidebar-menu .treeview-menu > li.active > a, .skin-yellow .sidebar-menu .treeview-menu > li > a:hover {
+  color: gold;
+}

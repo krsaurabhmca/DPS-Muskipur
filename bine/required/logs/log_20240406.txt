@@ -1,0 +1,4 @@
+[Sat 2024-04-06 04:04:07 PM] [client 2401:4900:1c37:db6c:d1c4:9fee:b3e9:a6e] by  UPDATE employee_att SET d_6 = 'P', status = 'ACTIVE' WHERE emp_id = '1'and att_month = 'apr_2024'
+[Sat 2024-04-06 04:04:07 PM] [client 2401:4900:1c37:db6c:d1c4:9fee:b3e9:a6e] by  UPDATE employee_att SET d_6 = 'A', status = 'ACTIVE' WHERE emp_id = '128'and att_month = 'apr_2024'
+[Sat 2024-04-06 04:04:07 PM] [client 2401:4900:1c37:db6c:d1c4:9fee:b3e9:a6e] by  UPDATE employee_att SET d_6 = 'A', status = 'ACTIVE' WHERE emp_id = '13'and att_month = 'apr_2024'
+[Sat 2024-04-06 04:04:07 PM] [client 2401:4900:1c37:db6c:d1c4:9fee:b3e9:a6e] by  UPDATE employee_att SET d_6 = 'A', status = 'ACTIVE' WHERE emp_id = '110'and att_month = 'apr_2024'

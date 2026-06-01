@@ -1,0 +1,30 @@
+[Thu 2024-08-29 11:13:31 AM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  alter table co_scholastic add column math varchar(255) 
+[Thu 2024-08-29 11:13:42 AM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  alter table co_scholastic add column hindi varchar(255) 
+[Thu 2024-08-29 11:13:53 AM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  SHOW COLUMNS FROM co_scholastic LIKE 'english'
+[Thu 2024-08-29 11:14:21 AM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  alter table co_scholastic add column drawing varchar(255) 
+[Thu 2024-08-29 11:14:44 AM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  alter table co_scholastic add column sst varchar(255) 
+[Thu 2024-08-29 11:15:03 AM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  alter table co_scholastic add column science varchar(255) 
+[Thu 2024-08-29 11:15:47 AM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  SHOW COLUMNS FROM co_scholastic LIKE 'sst'
+[Thu 2024-08-29 11:16:09 AM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  SHOW COLUMNS FROM co_scholastic LIKE 'science'
+[Thu 2024-08-29 11:17:32 AM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  alter table co_scholastic add column computer_g_k varchar(255) 
+[Thu 2024-08-29 11:18:32 AM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  SHOW COLUMNS FROM co_scholastic LIKE 'computer_g_k'
+[Thu 2024-08-29 11:19:17 AM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  SHOW COLUMNS FROM co_scholastic LIKE 'science'
+[Thu 2024-08-29 11:19:32 AM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  SHOW COLUMNS FROM co_scholastic LIKE 'sst'
+[Thu 2024-08-29 11:20:41 AM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  alter table co_scholastic add column g_k varchar(255) 
+[Thu 2024-08-29 11:21:09 AM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  SHOW COLUMNS FROM co_scholastic LIKE 'g_k'
+[Thu 2024-08-29 02:42:35 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '1', exam_date = '2024-08-30', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '1'
+[Thu 2024-08-29 02:42:35 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '2', exam_date = '2024-08-31', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '2'
+[Thu 2024-08-29 02:42:35 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '3', exam_date = '2024-09-02', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '3'
+[Thu 2024-08-29 02:42:35 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '4', exam_date = '2024-09-03', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '4'
+[Thu 2024-08-29 02:43:02 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '1', exam_date = '2024-08-30', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '1'
+[Thu 2024-08-29 02:43:02 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '2', exam_date = '2024-08-31', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '2'
+[Thu 2024-08-29 02:43:02 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '3', exam_date = '2024-09-02', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '3'
+[Thu 2024-08-29 02:43:02 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '4', exam_date = '2024-09-03', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '4'
+[Thu 2024-08-29 02:43:37 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '1', exam_date = '2024-08-30', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '1'
+[Thu 2024-08-29 02:43:37 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '2', exam_date = '2024-08-31', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '2'
+[Thu 2024-08-29 02:43:37 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '3', exam_date = '2024-09-02', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '3'
+[Thu 2024-08-29 02:43:37 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '4', exam_date = '2024-09-03', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '4'
+[Thu 2024-08-29 02:45:12 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '1', exam_date = '2024-09-05', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '1'
+[Thu 2024-08-29 02:45:12 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '2', exam_date = '2024-08-31', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '2'
+[Thu 2024-08-29 02:45:12 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '3', exam_date = '2024-09-02', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '3'
+[Thu 2024-08-29 02:45:12 PM] [client 2401:4900:1c37:742:a832:eb0:5519:3608] by  UPDATE admit_card SET student_class = 'NUR', subject_id = '4', exam_date = '2024-09-03', start_time = '09:30:00', end_time = '10:30:00' WHERE student_class = 'NUR'and subject_id = '4'

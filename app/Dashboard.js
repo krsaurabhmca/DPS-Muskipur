@@ -53,7 +53,7 @@ export default function DashboardScreen({ navigation, route }) {
       setLoading(true);
       // Get user_id from AsyncStorage
       const userId = await AsyncStorage.getItem('user_id') || '2';
-      
+
       const response = await fetch('https://dpsmushkipur.com/bine/api.php?task=dashboard', {
         method: 'POST',
         headers: {
@@ -61,7 +61,7 @@ export default function DashboardScreen({ navigation, route }) {
         },
         body: JSON.stringify({ user_id: parseInt(userId) }),
       });
-      
+
       const data = await response.json();
       setDashboardData(data);
       console.log("Dashboard data:", data);
@@ -92,7 +92,7 @@ export default function DashboardScreen({ navigation, route }) {
                 'user_type',
                 'isLoggedIn'
               ]);
-              
+
               // Navigate to login screen
               router.replace('/admin_login');
             } catch (error) {
@@ -231,6 +231,30 @@ export default function DashboardScreen({ navigation, route }) {
       description: "View Student Complaints",
       adminOnly: true,
     },
+    {
+      id: 10,
+      title: "Marks Entry",
+      icon: "edit",
+      color: "#FF8F00",
+      route: "MarksEntry",
+      description: "Enter & update student marks",
+    },
+    {
+      id: 11,
+      title: "My Attendance",
+      icon: "camera",
+      color: "#00B0FF",
+      route: "SelfieAttendance",
+      description: "Mark your own attendance",
+    },
+    {
+      id: 12,
+      title: "Staff Attendance Logs",
+      icon: "calendar-check",
+      color: "#4CAF50",
+      route: "TeacherAttendanceScreen",
+      description: "View teacher attendance reports",
+    },
   ];
 
   const handleMenuPress = (route) => {
@@ -333,7 +357,7 @@ export default function DashboardScreen({ navigation, route }) {
                 />
                 <View style={styles.statusIndicator} />
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.logoutButton}
                 onPress={handleLogout}
                 activeOpacity={0.7}
@@ -367,7 +391,9 @@ export default function DashboardScreen({ navigation, route }) {
               style={[styles.quickStatCard, { backgroundColor: "#4cc9f0" }]}
             >
               <Text style={styles.quickStatNumber}>{dashboardData.student}</Text>
-              <Text style={styles.quickStatLabel}>Total Students</Text>
+              <Text style={styles.quickStatLabel}>
+                {dashboardData.is_teacher ? "My Students" : "Total Students"}
+              </Text>
               <FontAwesome5
                 name="users"
                 size={24}
@@ -379,11 +405,13 @@ export default function DashboardScreen({ navigation, route }) {
               style={[styles.quickStatCard, { backgroundColor: "#38b000" }]}
             >
               <Text style={styles.quickStatNumber}>
-                {formatCurrency(dashboardData.collection)}
+                {dashboardData.is_teacher ? dashboardData.classes_count : formatCurrency(dashboardData.collection)}
               </Text>
-              <Text style={styles.quickStatLabel}>Total Collection</Text>
+              <Text style={styles.quickStatLabel}>
+                {dashboardData.is_teacher ? "My Classes" : "Total Collection"}
+              </Text>
               <FontAwesome5
-                name="rupee-sign"
+                name={dashboardData.is_teacher ? "school" : "rupee-sign"}
                 size={24}
                 color="rgba(255,255,255,0.3)"
                 style={styles.statIcon}
@@ -406,7 +434,22 @@ export default function DashboardScreen({ navigation, route }) {
           <Text style={styles.sectionTitle}>Management Tools</Text>
 
           <View style={styles.menuGrid}>
-            {menuItems.map((item) => (
+            {menuItems.filter(item => {
+              const role = dashboardData.user_type || 'TEACHER';
+              const isAdmin = role === 'ADMIN' || role === 'DBA' || role === 'DEV';
+
+              if (item.adminOnly) return isAdmin;
+
+              if (!isAdmin) {
+                const teacherMenus = ["Search Student", "Homework", "Marks Entry", "My Attendance", "Staff Attendance Logs", "Make Attendance"];
+                return teacherMenus.includes(item.title);
+              } else if (isAdmin) {
+                if (item.title === "Marks Entry" || item.title === "My Attendance") {
+                  return false;
+                }
+              }
+              return true;
+            }).map((item) => (
               <TouchableOpacity
                 key={item.id}
                 style={styles.menuItem}
@@ -427,103 +470,144 @@ export default function DashboardScreen({ navigation, route }) {
             ))}
           </View>
 
-          {/* Updated Recent Activity Section */}
-          <View style={styles.recentActivityContainer}>
-            <View style={styles.recentActivityHeader}>
-              <Text style={styles.recentActivityTitle}>Recent Activity</Text>
-              <TouchableOpacity onPress={fetchDashboardData}>
-                <FontAwesome5 name="sync-alt" size={14} color="#3498db" />
-              </TouchableOpacity>
-            </View>
+          {/* Dynamic Recent Activity Section based on user role */}
+          {dashboardData.is_teacher ? (
+            <View style={styles.recentActivityContainer}>
+              <View style={styles.recentActivityHeader}>
+                <Text style={styles.recentActivityTitle}>Recent Homework Updates</Text>
+                <TouchableOpacity onPress={fetchDashboardData}>
+                  <FontAwesome5 name="sync-alt" size={14} color="#3498db" />
+                </TouchableOpacity>
+              </View>
 
-            {/* Tab Buttons */}
-            <View style={styles.tabContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.tabButton,
-                  activeTab === "receipts" && styles.activeTabButton,
-                ]}
-                onPress={() => setActiveTab("receipts")}
-              >
-                <FontAwesome5 
-                  name="rupee-sign" 
-                  size={12} 
-                  color={activeTab === "receipts" ? "#ffffff" : "#38b000"} 
-                />
-                <Text
-                  style={[
-                    styles.tabButtonText,
-                    activeTab === "receipts" && styles.activeTabButtonText,
-                  ]}
-                >
-                  Fee Receipts ({dashboardData.recent_receipts?.length || 0})
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.tabButton,
-                  activeTab === "students" && styles.activeTabButton,
-                  activeTab === "students" && { backgroundColor: "#4361ee" },
-                ]}
-                onPress={() => setActiveTab("students")}
-              >
-                <FontAwesome5 
-                  name="user-plus" 
-                  size={12} 
-                  color={activeTab === "students" ? "#ffffff" : "#4361ee"} 
-                />
-                <Text
-                  style={[
-                    styles.tabButtonText,
-                    activeTab === "students" && styles.activeTabButtonText,
-                  ]}
-                >
-                  New Students ({dashboardData.recent_students?.length || 0})
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Activity List */}
-            <View style={styles.activityList}>
-              {activeTab === "receipts" ? (
-                dashboardData.recent_receipts && dashboardData.recent_receipts.length > 0 ? (
-                  dashboardData.recent_receipts.map((receipt, index) => 
-                    renderReceiptItem(receipt, index)
-                  )
+              <View style={styles.activityList}>
+                {dashboardData.recent_homework && dashboardData.recent_homework.length > 0 ? (
+                  dashboardData.recent_homework.map((hw, index) => (
+                    <View key={`hw-${hw.id}`} style={styles.activityItem}>
+                      <View style={[styles.activityIconContainer, { backgroundColor: "#7209b7" }]}>
+                        <FontAwesome5 name="book" size={16} color="#ffffff" />
+                      </View>
+                      <View style={styles.activityContent}>
+                        <Text style={styles.activityTitle}>
+                          Class {hw.hw_class} - Section {hw.hw_section} | {hw.subject_name}
+                        </Text>
+                        <Text style={styles.activityDescription} numberOfLines={2}>
+                          {hw.hw_text}
+                        </Text>
+                      </View>
+                      <View style={styles.activityTimeContainer}>
+                        <Text style={styles.activityTime}>
+                          {formatDate(hw.created_at)}
+                        </Text>
+                      </View>
+                    </View>
+                  ))
                 ) : (
                   <View style={styles.emptyState}>
-                    <FontAwesome5 name="receipt" size={40} color="#ddd" />
-                    <Text style={styles.emptyStateText}>No recent receipts</Text>
+                    <FontAwesome5 name="book-open" size={40} color="#ddd" />
+                    <Text style={styles.emptyStateText}>No homework assigned recently</Text>
                   </View>
-                )
-              ) : (
-                dashboardData.recent_students && dashboardData.recent_students.length > 0 ? (
-                  dashboardData.recent_students.map((student, index) => 
-                    renderStudentItem(student, index)
+                )}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.recentActivityContainer}>
+              <View style={styles.recentActivityHeader}>
+                <Text style={styles.recentActivityTitle}>Recent Activity</Text>
+                <TouchableOpacity onPress={fetchDashboardData}>
+                  <FontAwesome5 name="sync-alt" size={14} color="#3498db" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Tab Buttons */}
+              <View style={styles.tabContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.tabButton,
+                    activeTab === "receipts" && styles.activeTabButton,
+                  ]}
+                  onPress={() => setActiveTab("receipts")}
+                >
+                  <FontAwesome5
+                    name="rupee-sign"
+                    size={12}
+                    color={activeTab === "receipts" ? "#ffffff" : "#38b000"}
+                  />
+                  <Text
+                    style={[
+                      styles.tabButtonText,
+                      activeTab === "receipts" && styles.activeTabButtonText,
+                    ]}
+                  >
+                    Fee Receipts ({dashboardData.recent_receipts?.length || 0})
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.tabButton,
+                    activeTab === "students" && styles.activeTabButton,
+                    activeTab === "students" && { backgroundColor: "#4361ee" },
+                  ]}
+                  onPress={() => setActiveTab("students")}
+                >
+                  <FontAwesome5
+                    name="user-plus"
+                    size={12}
+                    color={activeTab === "students" ? "#ffffff" : "#4361ee"}
+                  />
+                  <Text
+                    style={[
+                      styles.tabButtonText,
+                      activeTab === "students" && styles.activeTabButtonText,
+                    ]}
+                  >
+                    New Students ({dashboardData.recent_students?.length || 0})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Activity List */}
+              <View style={styles.activityList}>
+                {activeTab === "receipts" ? (
+                  dashboardData.recent_receipts && dashboardData.recent_receipts.length > 0 ? (
+                    dashboardData.recent_receipts.map((receipt, index) =>
+                      renderReceiptItem(receipt, index)
+                    )
+                  ) : (
+                    <View style={styles.emptyState}>
+                      <FontAwesome5 name="receipt" size={40} color="#ddd" />
+                      <Text style={styles.emptyStateText}>No recent receipts</Text>
+                    </View>
                   )
                 ) : (
-                  <View style={styles.emptyState}>
-                    <FontAwesome5 name="users" size={40} color="#ddd" />
-                    <Text style={styles.emptyStateText}>No recent students</Text>
-                  </View>
-                )
+                  dashboardData.recent_students && dashboardData.recent_students.length > 0 ? (
+                    dashboardData.recent_students.map((student, index) =>
+                      renderStudentItem(student, index)
+                    )
+                  ) : (
+                    <View style={styles.emptyState}>
+                      <FontAwesome5 name="users" size={40} color="#ddd" />
+                      <Text style={styles.emptyStateText}>No recent students</Text>
+                    </View>
+                  )
+                )}
+              </View>
+
+              {/* Summary Footer */}
+              {activeTab === "receipts" && dashboardData.recent_receipts?.length > 0 && (
+                <View style={styles.summaryFooter}>
+                  <Text style={styles.summaryText}>
+                    Total from recent: {formatFullCurrency(
+                      dashboardData.recent_receipts.reduce(
+                        (sum, receipt) => sum + parseFloat(receipt.paid_amount),
+                        0
+                      )
+                    )}
+                  </Text>
+                </View>
               )}
             </View>
-
-            {/* Summary Footer */}
-            {activeTab === "receipts" && dashboardData.recent_receipts?.length > 0 && (
-              <View style={styles.summaryFooter}>
-                <Text style={styles.summaryText}>
-                  Total from recent: {formatFullCurrency(
-                    dashboardData.recent_receipts.reduce(
-                      (sum, receipt) => sum + parseFloat(receipt.paid_amount), 
-                      0
-                    )
-                  )}
-                </Text>
-              </View>
-            )}
-          </View>
+          )}
         </ScrollView>
       </SafeAreaView>
     </SafeAreaProvider>

@@ -1,0 +1,2 @@
+[Wed 2025-12-03 11:35:51 AM] [client 2409:40e4:1058:8cb5:bcff:b09f:3357:27b0] by  delete from student WHERE id  ='390'
+[Wed 2025-12-03 11:37:12 AM] [client 2409:40e4:1058:8cb5:bcff:b09f:3357:27b0] by  delete from student WHERE id  ='380'

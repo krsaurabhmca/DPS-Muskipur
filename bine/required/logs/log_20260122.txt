@@ -1,0 +1,2 @@
+[Thu 2026-01-22 12:04:58 PM] [client 2401:4900:88a1:87af:a19c:a07:900:1d51] by  SHOW COLUMNS FROM receipt LIKE 'transport_fee'
+[Thu 2026-01-22 12:04:58 PM] [client 2401:4900:88a1:87af:a19c:a07:900:1d51] by  SHOW COLUMNS FROM fee_details LIKE 'transport_fee'

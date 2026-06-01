@@ -1,0 +1,4 @@
+[Wed 2026-01-14 01:04:04 PM] [client 223.181.28.157] by  alter table receipt add column test_fee float(12,2)  DEFAULT 0.00
+[Wed 2026-01-14 01:04:04 PM] [client 223.181.28.157] by  alter table fee_details add column test_fee float(12,2) DEFAULT 0.00
+[Wed 2026-01-14 01:05:05 PM] [client 223.181.28.157] by  SHOW COLUMNS FROM receipt LIKE 'test_fee'
+[Wed 2026-01-14 01:05:05 PM] [client 223.181.28.157] by  SHOW COLUMNS FROM fee_details LIKE 'test_fee'

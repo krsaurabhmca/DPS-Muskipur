@@ -1,0 +1,22 @@
+{
+    "name":"BINE DIGITAL",
+    "short_name":"BINE",
+    "start_url":"dashboard.php",
+    "display":"standalone",
+    "background_color":"#ffbf36",
+    "theme_color":"black",
+    "scope": ".",
+    "description":"Complete ERP For SCHOOL",
+    "icons":[
+    {
+    "src":"images/icon-192x192.png",                     
+    "sizes":"192x192",
+    "type":"image/png"
+    },
+    {
+    "src":"images/icon-512x512.png",
+    "sizes":"512x512",
+    "type":"image/png"
+    }
+  ]
+}

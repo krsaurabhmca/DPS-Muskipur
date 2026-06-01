@@ -1,0 +1,2 @@
+[Fri 2023-02-17 11:07:38 AM] [client 59.94.78.165] by  alter table receipt add column annual_devlopement_fee float(12,2)  DEFAULT 0.00
+[Fri 2023-02-17 11:07:38 AM] [client 59.94.78.165] by  alter table fee_details add column annual_devlopement_fee float(12,2) DEFAULT 0.00

@@ -1,0 +1,1 @@
+[Tue 2026-04-28 12:02:30 PM] [client 2401:4900:88a2:af00:fcd9:921b:8074:95ec] by  delete from student WHERE id  ='414'

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Status - DPS Mushkipur</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 40px;
+        }
+        .icon.success {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+        .icon.processing {
+            background: #fff3e0;
+            color: #ff9800;
+        }
+        .icon.failed {
+            background: #ffebee;
+            color: #e74c3c;
+        }
+        h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 12px;
+        }
+        .message {
+            color: #666;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+        .txn-id {
+            background: #f5f7fa;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 24px;
+            word-break: break-all;
+        }
+        .btn {
+            display: inline-block;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            text-decoration: none;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: scale(1.02);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #fff3e0;
+            border-top-color: #ff9800;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loading-text {
+            margin-top: 16px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="container">
+        <div class="icon processing">
+            <div class="spinner"></div>
+        </div>
+        <h1>Verifying Payment</h1>
+        <p class="message">Please wait while we confirm your payment...</p>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const txnId = urlParams.get('txn_id');
+        
+        if (txnId) {
+            checkPaymentStatus();
+        } else {
+            showError('Transaction ID not found');
+        }
+        
+        async function checkPaymentStatus() {
+            try {
+                const response = await fetch('payment_api.php?task=check_payment_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transaction_id: txnId })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'SUCCESS') {
+                    showSuccess(data);
+                } else if (data.status === 'FAILED') {
+                    showError('Payment failed. Please try again.');
+                } else {
+                    // Still pending, check again after 3 seconds
+                    setTimeout(checkPaymentStatus, 3000);
+                }
+            } catch (error) {
+                showError('Unable to verify payment status');
+            }
+        }
+        
+        function showSuccess(data) {
+            document.getElementById('container').innerHTML = `
+                <div class="icon success">✓</div>
+                <h1>Payment Successful!</h1>
+                <p class="message">Your fee payment has been processed successfully.</p>
+                <div class="txn-id">Transaction ID: ${txnId}</div>
+                <a href="javascript:void(0)" class="btn btn-primary" onclick="closeWindow()">
+                    Return to App
+                </a>
+            `;
+        }
+        
+        function showError(message) {
+            document.getElementById('container').innerHTML = `
+                <div class="icon failed">✕</div>
+                <h1>Payment Failed</h1>
+                <p class="message">${message}</p>
+                <a href="javascript:void(0)" class="btn btn-primary" onclick="closeWindow()">
+                    Return to App
+                </a>
+            `;
+        }
+        
+        function closeWindow() {
+            // Try to redirect to app
+            window.location.href = 'dpsmushkipur://payment-callback?txn_id=' + txnId;
+            
+            // If app redirect fails, close window after a delay
+            setTimeout(() => {
+                window.close();
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

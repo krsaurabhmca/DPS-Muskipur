@@ -1,0 +1,2 @@
+[Mon 2024-07-15 09:17:10 AM] [client 117.203.155.211] by  delete from student WHERE id  ='58'
+[Mon 2024-07-15 11:23:43 AM] [client 117.194.198.250] by  delete from student WHERE id  ='166'

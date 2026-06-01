@@ -2,11 +2,13 @@
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -20,6 +22,8 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
 import {
   SafeAreaProvider,
   SafeAreaView,
@@ -34,6 +38,10 @@ import FileUploader from './FileUploader';
 export default function HomeWork() {
   // Get safe area insets
   const insets = useSafeAreaInsets();
+  
+  // Role & Assignments states
+  const [userRole, setUserRole] = useState('ADMIN');
+  const [assignments, setAssignments] = useState([]);
   
   // States for class selection
   const [classes, setClasses] = useState([]);
@@ -56,6 +64,40 @@ export default function HomeWork() {
   
   const formattedDate = format(currentDate, 'dd MMMM yyyy');
   
+  // Tab states and history lists
+  const [userId, setUserId] = useState('');
+  const [activeTab, setActiveTab] = useState('assign'); // 'assign' or 'history'
+  const [historyLogs, setHistoryLogs] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+
+  // Homework history query
+  const fetchHomeworkHistory = async (uId = userId, role = userRole) => {
+    try {
+      setLoadingHistory(true);
+      const activeUid = uId || await AsyncStorage.getItem('user_id');
+      const activeRole = role || await AsyncStorage.getItem('user_type');
+      
+      const response = await fetch('https://dpsmushkipur.com/bine/api.php?task=get_teacher_homework_history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          user_id: activeUid,
+          role: activeRole
+        })
+      });
+      const result = await response.json();
+      if (result.status === 'success') {
+        setHistoryLogs(result.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching homework history:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   // Animation values
   const [fadeAnim] = useState(new Animated.Value(0));
 
@@ -94,13 +136,51 @@ export default function HomeWork() {
   const fetchClasses = async () => {
     try {
       setLoadingClasses(true);
-      const response = await fetch('https://dpsmushkipur.com/bine/api.php?task=class_list');
-      const result = await response.json();
       
-      if (result.status === 'success') {
-        setClasses(result.data);
+      const role = await AsyncStorage.getItem('user_type');
+      const uId = await AsyncStorage.getItem('user_id');
+      setUserRole(role || 'TEACHER');
+      setUserId(uId || '');
+      
+      // Load teacher homework history
+      fetchHomeworkHistory(uId, role || 'TEACHER');
+      
+      if (role === 'TEACHER' || role === 'STAFF') {
+        const response = await fetch('https://dpsmushkipur.com/bine/api.php?task=get_teacher_assignments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: uId })
+        });
+        const result = await response.json();
+        
+        if (result.status === 'success' && Array.isArray(result.data)) {
+          setAssignments(result.data);
+          
+          // Build list of unique assigned class-sections
+          const uniqueClassesMap = {};
+          result.data.forEach(item => {
+            const key = `${item.student_class}-${item.student_section}`;
+            if (!uniqueClassesMap[key]) {
+              uniqueClassesMap[key] = {
+                student_class: item.student_class,
+                student_section: item.student_section,
+                total: 0 // Default
+              };
+            }
+          });
+          setClasses(Object.values(uniqueClassesMap));
+        } else {
+          showAlert('Info', 'No active class assignments found for your teacher account.');
+        }
       } else {
-        showAlert('Error', 'Failed to fetch classes');
+        const response = await fetch('https://dpsmushkipur.com/bine/api.php?task=class_list');
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+          setClasses(result.data);
+        } else {
+          showAlert('Error', 'Failed to fetch classes');
+        }
       }
     } catch (err) {
       showAlert('Error', 'Network error: ' + err.message);
@@ -114,22 +194,36 @@ export default function HomeWork() {
     
     try {
       setLoadingSubjects(true);
-      const response = await fetch(
-        'https://dpsmushkipur.com/bine/api.php?task=subject_list',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ hw_class: selectedClass.student_class }),
-        }
-      );
-      const result = await response.json();
       
-      if (result.status === 'success') {
-        setSubjects(result.data);
+      const role = await AsyncStorage.getItem('user_type');
+      if (role === 'TEACHER' || role === 'STAFF') {
+        // Teacher flow: filter subjects from active assignments list
+        const allowedSubjects = assignments
+          .filter(a => a.student_class === selectedClass.student_class && a.student_section === selectedClass.student_section)
+          .map(a => ({
+            id: a.subject_id,
+            subject_name: a.subject_name
+          }));
+        setSubjects(allowedSubjects);
       } else {
-        showAlert('Error', 'Failed to fetch subjects');
+        // Admin flow: fetch all subjects for class
+        const response = await fetch(
+          'https://dpsmushkipur.com/bine/api.php?task=subject_list',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ hw_class: selectedClass.student_class }),
+          }
+        );
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+          setSubjects(result.data);
+        } else {
+          showAlert('Error', 'Failed to fetch subjects');
+        }
       }
     } catch (err) {
       showAlert('Error', 'Network error: ' + err.message);
@@ -208,6 +302,7 @@ export default function HomeWork() {
       if (result.status === 'success') {
         setSubmitSuccess(true);
         resetForm();
+        fetchHomeworkHistory(userId, userRole);
       } else {
         showAlert('Error', 'Failed to add homework: ' + (result.message || 'Unknown error'));
       }
@@ -422,6 +517,97 @@ export default function HomeWork() {
     );
   };
 
+  // Render Homework History View
+  const renderHistoryTab = () => {
+    if (loadingHistory) {
+      return (
+        <View style={styles.loadingHistoryContainer}>
+          <ActivityIndicator size="large" color="#1B5E20" />
+          <Text style={styles.loadingHistoryText}>Loading homework history...</Text>
+        </View>
+      );
+    }
+
+    return (
+      <FlatList
+        data={historyLogs}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={[styles.historyListContent, { paddingBottom: 20 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyHistoryCard}>
+            <Ionicons name="clipboard-outline" size={60} color="#CBD5E0" style={{ marginBottom: 14 }} />
+            <Text style={styles.emptyHistoryTitle}>No homework logs found</Text>
+            <Text style={styles.emptyHistoryDesc}>
+              You have not posted any homework assignments yet. Use the Create Tab to post your first assignment!
+            </Text>
+          </View>
+        )}
+        renderItem={({ item }) => {
+          const isImage = item.hw_file && ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(item.hw_file.split('.').pop().toLowerCase());
+          const isPdf = item.hw_file && item.hw_file.split('.').pop().toLowerCase() === 'pdf';
+          
+          return (
+            <View style={styles.historyCard}>
+              <View style={styles.historyCardHeader}>
+                <View style={styles.historyHeaderLeft}>
+                  <View style={[styles.subjectIconCircle, { backgroundColor: '#E8F5E9' }]}>
+                    <Ionicons name="book" size={18} color="#1B5E20" />
+                  </View>
+                  <View>
+                    <Text style={styles.historySubjectText}>{item.subject_name || `Subject #${item.subject_id}`}</Text>
+                    <Text style={styles.historyClassText}>Class {item.hw_class} - {item.hw_section}</Text>
+                  </View>
+                </View>
+                <View style={styles.historyDateBadge}>
+                  <Text style={styles.historyDateText}>
+                    {new Date(item.hw_date).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.historyCardBody}>
+                <Text style={styles.historyLabel}>Assignment details:</Text>
+                <Text style={styles.historyDescriptionText}>{item.hw_text}</Text>
+                
+                {item.hw_file ? (
+                  <TouchableOpacity
+                    style={styles.historyAttachmentBtn}
+                    onPress={() => {
+                      const fileUrl = `https://dpsmushkipur.com/bine/homework/${item.hw_file}`;
+                      if (isImage) {
+                        setSelectedImage(fileUrl);
+                        setImageModalVisible(true);
+                      } else {
+                        Linking.openURL(fileUrl).catch(() => {
+                          Alert.alert('Error', 'Could not open attachment link.');
+                        });
+                      }
+                    }}
+                  >
+                    <Ionicons 
+                      name={isImage ? "image-outline" : isPdf ? "document-text-outline" : "attach-outline"} 
+                      size={18} 
+                      color="#1B5E20" 
+                    />
+                    <Text style={styles.historyAttachmentText} numberOfLines={1}>
+                      {item.hw_file}
+                    </Text>
+                    <Ionicons name="eye-outline" size={14} color="#1B5E20" style={{ marginLeft: 'auto' }} />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </View>
+          );
+        }}
+      />
+    );
+  };
+
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
@@ -433,34 +619,60 @@ export default function HomeWork() {
         >
         
           <View style={styles.header}>
-                  <LinearGradient
-                    colors={["#1e3c72", "#2a5298"]}
-                    style={styles.headerGradient}
-                  />
-                  <View style={styles.headerContent}>
-                    <TouchableOpacity
-                      style={styles.backButton}
-                      onPress={() => router.back()}
-                    >
-                      <FontAwesome5 name="arrow-left" size={20} color="#ffffff" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>HomeWork</Text>
-                    <TouchableOpacity
-                      style={styles.infoButton}
-                      onPress={() => {
-                        Alert.alert(
-                          "Homework Information",
-                          "This screen shows the fee details for the selected student. You can select pending months and pay them together.",
-                          [{ text: "OK" }]
-                        );
-                      }}
-                    >
-                      <FontAwesome5 name="info-circle" size={20} color="#ffffff" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
+            <LinearGradient
+              colors={["#1e3c72", "#2a5298"]}
+              style={styles.headerGradient}
+            />
+            <View style={styles.headerContent}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.back()}
+              >
+                <FontAwesome5 name="arrow-left" size={20} color="#ffffff" />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>HomeWork</Text>
+              <TouchableOpacity
+                style={styles.infoButton}
+                onPress={() => {
+                  Alert.alert(
+                    "Homework Information",
+                    "Assigned homework will be published to the selected student classes instantly.",
+                    [{ text: "OK" }]
+                  );
+                }}
+              >
+                <FontAwesome5 name="info-circle" size={20} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Tab Buttons */}
+          <View style={styles.tabsHeader}>
+            <TouchableOpacity
+              style={[styles.tabBtn, activeTab === 'assign' && styles.activeTabBtn]}
+              onPress={() => setActiveTab('assign')}
+            >
+              <Ionicons name="create-outline" size={16} color={activeTab === 'assign' ? '#fff' : '#1B5E20'} style={{ marginRight: 6 }} />
+              <Text style={[styles.tabBtnText, activeTab === 'assign' && styles.activeTabBtnText]}>
+                Assign Homework
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tabBtn, activeTab === 'history' && styles.activeTabBtn]}
+              onPress={() => {
+                setActiveTab('history');
+                fetchHomeworkHistory(userId, userRole);
+              }}
+            >
+              <Ionicons name="time-outline" size={16} color={activeTab === 'history' ? '#fff' : '#1B5E20'} style={{ marginRight: 6 }} />
+              <Text style={[styles.tabBtnText, activeTab === 'history' && styles.activeTabBtnText]}>
+                Homework History
+              </Text>
+            </TouchableOpacity>
+          </View>
           
-          
+          {activeTab === 'assign' ? (
           <ScrollView 
             style={styles.container} 
             contentContainerStyle={[
@@ -621,6 +833,50 @@ export default function HomeWork() {
             <ClassSelectionModal />
             <SubjectSelectionModal />
           </ScrollView>
+          ) : (
+            renderHistoryTab()
+          )}
+
+          {/* Image Modal for attachments */}
+          <Modal
+            visible={imageModalVisible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setImageModalVisible(false)}
+          >
+            <View style={styles.imageModalContainer}>
+              <TouchableOpacity 
+                style={styles.imageModalCloseBtn}
+                onPress={() => setImageModalVisible(false)}
+              >
+                <Ionicons name="close-circle" size={38} color="#fff" />
+              </TouchableOpacity>
+              
+              <Image
+                source={{ uri: selectedImage }}
+                style={styles.imageModalPreview}
+                resizeMode="contain"
+              />
+              
+              <TouchableOpacity
+                style={styles.imageModalDownloadBtn}
+                onPress={() => {
+                  Linking.openURL(selectedImage).catch(() => {
+                    Alert.alert('Error', 'Cannot open browser link');
+                  });
+                }}
+              >
+                <LinearGradient
+                  colors={["#4CAF50", "#1B5E20"]}
+                  style={styles.imageModalDownloadGradient}
+                >
+                  <Ionicons name="download" size={18} color="#fff" />
+                  <Text style={styles.imageModalDownloadText}>Open in Browser</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </Modal>
+
         </KeyboardAvoidingView>
       </SafeAreaView>
     </SafeAreaProvider>
@@ -1001,5 +1257,201 @@ const styles = StyleSheet.create({
     color: '#777',
     fontSize: 16,
     textAlign: 'center',
+  },
+  // Tab styles
+  tabsHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    padding: 8,
+    marginHorizontal: 16,
+    marginTop: 14,
+    borderRadius: 14,
+    gap: 8,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  tabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#F0FDF4',
+  },
+  activeTabBtn: {
+    backgroundColor: '#1B5E20',
+  },
+  tabBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1B5E20',
+  },
+  activeTabBtnText: {
+    color: '#fff',
+  },
+  // History tab styles
+  loadingHistoryContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 80,
+  },
+  loadingHistoryText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+  },
+  historyListContent: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 30,
+  },
+  emptyHistoryCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 30,
+    alignItems: 'center',
+    marginTop: 40,
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+  },
+  emptyHistoryTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#4A5568',
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  emptyHistoryDesc: {
+    fontSize: 12,
+    color: '#718096',
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 12,
+  },
+  historyCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 3,
+  },
+  historyCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F7FAFC',
+    paddingBottom: 10,
+    marginBottom: 12,
+  },
+  historyHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  subjectIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  historySubjectText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#2D3748',
+  },
+  historyClassText: {
+    fontSize: 12,
+    color: '#718096',
+    marginTop: 2,
+  },
+  historyDateBadge: {
+    backgroundColor: '#EDF2F7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  historyDateText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#4A5568',
+  },
+  historyCardBody: {
+    gap: 8,
+  },
+  historyLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1B5E20',
+  },
+  historyDescriptionText: {
+    fontSize: 13,
+    color: '#4A5568',
+    lineHeight: 18,
+  },
+  historyAttachmentBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    marginTop: 6,
+    gap: 8,
+  },
+  historyAttachmentText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#1B5E20',
+    maxWidth: '80%',
+  },
+  // Image modal styles
+  imageModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageModalCloseBtn: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+  },
+  imageModalPreview: {
+    width: width - 32,
+    height: height - 200,
+  },
+  imageModalDownloadBtn: {
+    position: 'absolute',
+    bottom: 40,
+    borderRadius: 25,
+    overflow: 'hidden',
+  },
+  imageModalDownloadGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  imageModalDownloadText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });

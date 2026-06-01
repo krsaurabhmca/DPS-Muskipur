@@ -1,0 +1,31 @@
+[Wed 2024-05-29 01:25:38 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  Resource id #6
+[Wed 2024-05-29 01:41:47 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  Resource id #6
+[Wed 2024-05-29 01:42:57 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  Resource id #5
+[Wed 2024-05-29 01:43:39 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  Resource id #5
+[Wed 2024-05-29 01:44:03 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  Resource id #5
+[Wed 2024-05-29 02:11:28 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  alter table receipt add column registration_fee float(12,2)  DEFAULT 0.00
+[Wed 2024-05-29 02:11:28 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  alter table fee_details add column registration_fee float(12,2) DEFAULT 0.00
+[Wed 2024-05-29 02:12:08 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM receipt LIKE 'annual_fee'
+[Wed 2024-05-29 02:12:08 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM fee_details LIKE 'annual_fee'
+[Wed 2024-05-29 02:12:50 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  alter table receipt add column development_fee float(12,2)  DEFAULT 0.00
+[Wed 2024-05-29 02:12:50 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  alter table fee_details add column development_fee float(12,2) DEFAULT 0.00
+[Wed 2024-05-29 02:13:22 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM receipt LIKE 'admission_fee'
+[Wed 2024-05-29 02:13:22 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM fee_details LIKE 'admission_fee'
+[Wed 2024-05-29 02:20:01 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  alter table receipt add column tution_fee float(12,2)  DEFAULT 0.00
+[Wed 2024-05-29 02:20:01 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  alter table fee_details add column tution_fee float(12,2) DEFAULT 0.00
+[Wed 2024-05-29 02:21:11 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM receipt LIKE 'tution_fee'
+[Wed 2024-05-29 02:21:11 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM fee_details LIKE 'tution_fee'
+[Wed 2024-05-29 02:24:20 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM receipt LIKE 'registration_fee'
+[Wed 2024-05-29 02:24:20 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM fee_details LIKE 'registration_fee'
+[Wed 2024-05-29 02:24:38 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM receipt LIKE 'annual_fee'
+[Wed 2024-05-29 02:24:38 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM fee_details LIKE 'annual_fee'
+[Wed 2024-05-29 02:25:00 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM receipt LIKE 'development_fee'
+[Wed 2024-05-29 02:25:00 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM fee_details LIKE 'development_fee'
+[Wed 2024-05-29 02:26:25 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM receipt LIKE 'admission_fee'
+[Wed 2024-05-29 02:26:25 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM fee_details LIKE 'admission_fee'
+[Wed 2024-05-29 02:26:46 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM receipt LIKE 'tution_fee'
+[Wed 2024-05-29 02:26:46 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM fee_details LIKE 'tution_fee'
+[Wed 2024-05-29 02:27:46 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM receipt LIKE 'transport_fee'
+[Wed 2024-05-29 02:27:46 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM fee_details LIKE 'transport_fee'
+[Wed 2024-05-29 02:28:28 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM receipt LIKE 'hostel_fee'
+[Wed 2024-05-29 02:28:28 PM] [client 2401:4900:1ca9:a4c8:c933:1671:f6cb:dbc3] by  SHOW COLUMNS FROM fee_details LIKE 'hostel_fee'

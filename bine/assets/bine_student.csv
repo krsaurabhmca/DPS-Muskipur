@@ -1,0 +1,13 @@
+id,student_name,student_mother,student_father,date_of_birth,student_class,student_section,student_roll,student_sex,student_category,student_address1,student_address2,student_city,student_type,student_admission,finance_type,student_doa,pin_code,aadhar_no,student_mobile,student_whatsapp,student_religion,student_caste,app_no,father_mobile,mother_mobile,student_bloodgroup,student_photo,admission_type,student_email,base_dues,vth_subject,status,cbse_reg_no,father_qualification,father_occupation,mother_qualification,mother_occupation,family_income
+1,Abhilaksh Singh,A Devi,Rakesh Kumar Singh,yyyy-mm-dd,I,A,1,Male,,"Sherpur, PO - Gheghta, Distt - Chapra, Saran","Sherpur, PO - Gheghta, Distt - Chapra, Saran",NULL,GENERAL,100/2020,Normal,0000-00-00,,,8701905008,,NULL,NULL,NULL,NULL,NULL,,no_image.jpg,OLD,,950,None,ACTIVE,,,,,,
+2,Abhinav Kumar,,Jay Kumari,yyyy-mm-dd,I,A,3,Male,,"Khalpura, Distt - Chapra, Saran","Khalpura, Distt - Chapra, Saran",NULL,HOSTEL,101/2020,BPL,0000-00-00,,,7992274605,,NULL,NULL,NULL,NULL,NULL,,no_image.jpg,NEW,,0,None,ACTIVE,,,,,,
+3,Aditya Gupta,,Pintu Sah,0000-00-00,I,A,4,Male,,"Madhaura, Station Road, Distt- Saran, State- Bihar","Madhaura, Station Road, Distt- Saran, State- Bihar",NULL,TRANSPORT,102016,Normal,0000-00-00,,,7546877338,,NULL,NULL,NULL,NULL,NULL,,no_image.jpg,OLD,,1430,None,ACTIVE,,,,,,
+4,Akash Kumar,,Rakesh Kumar Pandit,0000-00-00,I,A,5,Male,,Jalalpur Po-Gultenganj Dist-Saran,Jalalpur Po-Gultenganj Dist-Saran,NULL,GENERAL,103/2020,Normal,0000-00-00,,,7488820005,,NULL,NULL,NULL,NULL,NULL,,no_image.jpg,OLD,,760,None,ACTIVE,,,,,,
+5,Anjali Kumari,,Santosh Kumar ,0000-00-00,I,A,6,Female,,"Maharajganj, PO - Gultenganj, Distt - Chapra, Saran","Maharajganj, PO - Gultenganj, Distt - Chapra, Saran",NULL,GENERAL,104/2020,Normal,0000-00-00,,,9852452839,,NULL,NULL,NULL,NULL,NULL,,no_image.jpg,OLD,,0,None,ACTIVE,,,,,,
+
+
+,READ THIS INSTRUCTION TO IMPORT DATA,,,
+,Remove All Dummy Data and clean this sheet except 1st row,,,
+,Don't Change the ID In case of change or update,,,
+,"Don’t Use Special Chrecter in Data like  (',.&*|/\~""_-+{}[])",
+,"In special cndition you may use(,-_.)",

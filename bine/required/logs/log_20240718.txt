@@ -1,0 +1,1 @@
+[Thu 2024-07-18 09:25:34 AM] [client 117.194.205.196] by  delete from student WHERE id  ='341'
