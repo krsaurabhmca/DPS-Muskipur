@@ -43,10 +43,49 @@ export default function StudentFeeScreen() {
 
   const [selectedMonths, setSelectedMonths] = useState([]);
 
-  // Fetch fee data from API
+  // Fetch fee data and student profile from API
   useEffect(() => {
+    fetchStudentProfile();
     fetchFeeData();
   }, [student_id]);
+
+  const fetchStudentProfile = async () => {
+    try {
+      if (!student_id) return;
+      const response = await axios.post(
+        "https://dpsmushkipur.com/bine/api.php?task=get_student_profile",
+        { student_id: student_id }
+      );
+      if (response.data) {
+        let parsedData = response.data;
+        // Parse string response if needed
+        if (typeof parsedData === 'string') {
+          try {
+            parsedData = JSON.parse(parsedData);
+          } catch (e) {
+            console.error("Failed to parse student profile JSON");
+          }
+        }
+        
+        let studentData = parsedData;
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          studentData = parsedData[0];
+        }
+        
+        if (studentData && studentData.id) {
+          setStudentInfo({
+            id: studentData.id,
+            name: studentData.student_name || "Student Name",
+            class: studentData.student_class || "",
+            section: studentData.student_section || "",
+            admissionNo: studentData.student_admission || "",
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching student profile:", err);
+    }
+  };
 
   const fetchFeeData = async () => {
     setIsLoading(true);
@@ -66,9 +105,25 @@ export default function StudentFeeScreen() {
 
       // Process the API response
       if (response.data) {
+        // Extract student profile if present
+        if (response.data.student_profile) {
+          const profile = response.data.student_profile;
+          setStudentInfo({
+            id: profile.id,
+            name: profile.student_name || "Student Name",
+            class: profile.student_class || "",
+            section: profile.student_section || "",
+            admissionNo: profile.student_admission || "",
+          });
+        }
+        
         // Ensure each month has a total as a number and proper status
         const processedData = {};
+        const initialSelected = [];
+        
         Object.entries(response.data).forEach(([month, fees]) => {
+          if (month === 'student_profile') return; // Skip the profile data
+          
           processedData[month] = {
             ...fees,
             // Ensure total is a number
@@ -79,9 +134,17 @@ export default function StudentFeeScreen() {
             // Ensure status is properly captured (if it doesn't exist, default to UNPAID)
             status: fees.status || "UNPAID",
           };
+          
+          // Auto-select previous_dues if it exists and is unpaid
+          if (month === "previous_dues" && processedData[month].status !== "PAID") {
+            initialSelected.push(month);
+          }
         });
 
         setFeeData(processedData);
+        if (initialSelected.length > 0) {
+          setSelectedMonths(initialSelected);
+        }
       } else {
         throw new Error("Invalid response from server");
       }
@@ -131,13 +194,31 @@ export default function StudentFeeScreen() {
 
     if (feeData[month].status === "PAID") return;
 
-    setSelectedMonths((prev) => {
-      if (prev.includes(month)) {
-        return prev.filter((m) => m !== month);
-      } else {
-        return [...prev, month];
+    let newSelectedMonths = [...selectedMonths];
+
+    if (newSelectedMonths.includes(month)) {
+      // Prevent deselecting previous dues
+      if (month === "previous_dues") {
+        Alert.alert("Required", "Previous dues must be cleared first.");
+        return;
       }
-    });
+      // Deselect the month
+      newSelectedMonths = newSelectedMonths.filter((m) => m !== month);
+    } else {
+      // Select the month
+      newSelectedMonths.push(month);
+
+      // Auto-select previous dues if applicable and not already selected
+      if (
+        feeData["previous_dues"] &&
+        feeData["previous_dues"].status !== "PAID" &&
+        !newSelectedMonths.includes("previous_dues")
+      ) {
+        newSelectedMonths.push("previous_dues");
+      }
+    }
+
+    setSelectedMonths(newSelectedMonths);
   };
 
   // Handle payment

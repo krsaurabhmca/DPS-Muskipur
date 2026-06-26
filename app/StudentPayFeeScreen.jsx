@@ -33,7 +33,7 @@ export default function StudentPayFeeScreen() {
   const [error, setError] = useState(null);
   const [feeData, setFeeData] = useState(null);
   const [selectedMonths, setSelectedMonths] = useState([]);
-  const [studentInfo] = useState({
+  const [studentInfo, setStudentInfo] = useState({
     id: student_id || "",
     name: student_name || "Student Name",
     class: student_class || "",
@@ -60,8 +60,22 @@ export default function StudentPayFeeScreen() {
       );
 
       if (response.data) {
+        if (response.data.student_profile) {
+          const profile = response.data.student_profile;
+          setStudentInfo({
+            id: profile.id,
+            name: profile.student_name || "Student Name",
+            class: profile.student_class || "",
+            section: profile.student_section || "",
+            admissionNo: profile.student_admission || "",
+          });
+        }
+        
         const processedData = {};
+        const initialSelected = [];
+        
         Object.entries(response.data).forEach(([month, fees]) => {
+          if (month === 'student_profile') return;
           processedData[month] = {
             ...fees,
             total:
@@ -70,9 +84,14 @@ export default function StudentPayFeeScreen() {
                 : parseFloat(fees.total) || 0,
             status: fees.status || "UNPAID",
           };
+          
+          if (month === "previous_dues" && processedData[month].status !== "PAID") {
+            initialSelected.push(month);
+          }
         });
 
         setFeeData(processedData);
+        setSelectedMonths(initialSelected);
       } else {
         throw new Error("Invalid response from server");
       }
@@ -90,11 +109,29 @@ export default function StudentPayFeeScreen() {
     if (feeData[month].status === "PAID") return;
 
     setSelectedMonths((prev) => {
-      if (prev.includes(month)) {
-        return prev.filter((m) => m !== month);
+      let newSelected = [...prev];
+      if (newSelected.includes(month)) {
+        // Prevent deselecting previous dues
+        if (month === "previous_dues") {
+          import("react-native").then(({ Alert }) => {
+            Alert.alert("Required", "Previous dues must be cleared first.");
+          });
+          return prev;
+        }
+        newSelected = newSelected.filter((m) => m !== month);
       } else {
-        return [...prev, month];
+        newSelected.push(month);
+        
+        // Auto-select previous_dues if applicable and not already selected
+        if (
+          feeData["previous_dues"] &&
+          feeData["previous_dues"].status !== "PAID" &&
+          !newSelected.includes("previous_dues")
+        ) {
+          newSelected.push("previous_dues");
+        }
       }
+      return newSelected;
     });
   };
 

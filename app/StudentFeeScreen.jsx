@@ -32,7 +32,7 @@ export default function StudentFeeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [feeData, setFeeData] = useState(null);
-  const [studentInfo] = useState({
+  const [studentInfo, setStudentInfo] = useState({
     id: student_id || "",
     name: student_name || "Student Name",
     class: student_class || "",
@@ -59,8 +59,21 @@ export default function StudentFeeScreen() {
       );
 
       if (response.data) {
+        if (response.data.student_profile) {
+          const profile = response.data.student_profile;
+          setStudentInfo({
+            id: profile.id,
+            name: profile.student_name || "Student Name",
+            class: profile.student_class || "",
+            section: profile.student_section || "",
+            admissionNo: profile.student_admission || "",
+          });
+        }
+        
         const processedData = {};
+        
         Object.entries(response.data).forEach(([month, fees]) => {
+          if (month === 'student_profile') return;
           processedData[month] = {
             ...fees,
             total:

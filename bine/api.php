@@ -78,9 +78,22 @@ if (isset($_GET['task'])) {
         case "student_fee":
             extract($data);
             $month_list;
+            $all_fee = [];
+            
+            // Add student profile data
+            $profile_sql = "SELECT id, student_admission, student_name, student_class, student_section FROM student WHERE id = '$student_id' AND status = 'ACTIVE'";
+            $profile_res = direct_sql($profile_sql);
+            if ($profile_res['count'] > 0) {
+                $all_fee['student_profile'] = $profile_res['data'][0];
+            }
+            
             $prev_dues = intval(get_data('student_fee', $student_id, 'current_dues', 'student_id')['data']);
             if ($prev_dues <> 0) {
-                $all_fee['previous_dues'] = intval(get_data('student_fee', $student_id, 'current_dues', 'student_id')['data']);
+                $all_fee['previous_dues'] = [
+                    'Previous Dues' => $prev_dues,
+                    'total' => $prev_dues,
+                    'status' => 'UNPAID'
+                ];
             }
             foreach ($month_list as $month) {
                 $fee = monthly_fee($student_id, $month);
@@ -565,8 +578,8 @@ if (isset($_GET['task'])) {
                             f.current_dues,
                             COALESCE(SUM(r.paid_amount), 0) AS total_paid
                         FROM student s
-                        LEFT JOIN student_fee f ON s.student_admission = f.student_admission
-                        LEFT JOIN receipt r ON s.student_admission = r.student_admission
+                        LEFT JOIN student_fee f ON s.id = f.student_id
+                        LEFT JOIN receipt r ON s.id = r.student_id
                         WHERE s.student_mobile = '$student_mobile' AND s.status = 'ACTIVE'
                         GROUP BY 
                             s.id, s.otp, s.student_admission, s.student_name, s.student_class, 
@@ -654,8 +667,8 @@ if (isset($_GET['task'])) {
                             f.current_dues,
                             COALESCE(SUM(r.paid_amount), 0) AS total_paid
                         FROM student s
-                        LEFT JOIN student_fee f ON s.student_admission = f.student_admission
-                        LEFT JOIN receipt r ON s.student_admission = r.student_admission
+                        LEFT JOIN student_fee f ON s.id = f.student_id
+                        LEFT JOIN receipt r ON s.id = r.student_id
                         WHERE s.id = '$student_id' AND s.status = 'ACTIVE'
                         GROUP BY 
                             s.id, s.otp, s.student_admission, s.student_name, s.student_class, 

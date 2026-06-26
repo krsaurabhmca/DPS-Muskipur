@@ -1,5 +1,4 @@
 import { FontAwesome5 } from "@expo/vector-icons";
-import axios from "axios";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -9,7 +8,6 @@ import {
   Alert,
   Dimensions,
   Image,
-  Linking,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -64,131 +62,34 @@ export default function OnlinePaymentScreen() {
     transactionId,
   ]);
 
-  const handlePhonePePayment = async () => {
+  const handlePhonePePayment = () => {
     if (!paymentDetails) {
       Alert.alert("Error", "Payment details not loaded");
       return;
     }
-
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsProcessing(true);
+    // router.push({
+    //   pathname: "/PaymentWebViewScreen",
+    //   params: {
+    //     student_id: paymentDetails.studentId,
+    //     student_name: paymentDetails.studentName,
+    //     amount: paymentDetails.totalAmount,
+    //     selected_months: JSON.stringify(paymentDetails.selectedMonths),
+    //     transaction_id: paymentDetails.transactionId,
+    //   },
 
-    try {
-      const paymentPayload = {
-        student_id: paymentDetails.studentId,
-        student_name: paymentDetails.studentName,
-        amount: paymentDetails.totalAmount,
-        transaction_id: paymentDetails.transactionId,
-        selected_months: paymentDetails.selectedMonths,
-        payment_method: "PhonePe",
-      };
+    const paymentUrl =
+      `https://dpsmushkipur.com/bine/ppay/index.php` +
+      `?student_id=${encodeURIComponent(paymentDetails.studentId)}` +
+      `&amount=${encodeURIComponent(paymentDetails.totalAmount)}` +
+      `&name=${encodeURIComponent(paymentDetails.studentName || "")}` +
+      `&selected_months=${encodeURIComponent(JSON.stringify(paymentDetails.selectedMonths))}`;
 
-      console.log("📤 Sending Payment Request:", paymentPayload);
-
-      const response = await axios.post(
-        "https://dpsmushkipur.com/bine/api.php?task=initiate_phonepe_payment",
-        paymentPayload,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          timeout: 30000,
-        }
-      );
-
-      console.log("📥 API Response:", response.data);
-
-      if (response.data && response.data.success === true) {
-        const paymentUrl = response.data.payment_url || response.data.url;
-        const merchantTransactionId =
-          response.data.merchant_transaction_id ||
-          response.data.merchantTransactionId;
-
-        console.log("✅ Payment URL:", paymentUrl);
-        console.log("✅ Merchant Transaction ID:", merchantTransactionId);
-
-        if (!paymentUrl) {
-          throw new Error("Payment URL not received from server");
-        }
-
-        const canOpen = await Linking.canOpenURL(paymentUrl);
-
-        if (canOpen) {
-          await Linking.openURL(paymentUrl);
-
-          Alert.alert(
-            "Payment Initiated",
-            "You will be redirected to PhonePe to complete the payment.",
-            [
-              {
-                text: "OK",
-                onPress: () => {
-                  router.replace({
-                    pathname: "/PaymentStatusScreen",
-                    params: {
-                      transaction_id:
-                        merchantTransactionId || paymentDetails.transactionId,
-                      student_id: paymentDetails.studentId,
-                      student_name: paymentDetails.studentName,
-                      amount: paymentDetails.totalAmount,
-                    },
-                  });
-                },
-              },
-            ]
-          );
-        } else {
-          throw new Error("Cannot open payment URL");
-        }
-      } else {
-        const errorMessage =
-          response.data?.message ||
-          response.data?.error ||
-          "Payment initiation failed. Please try again.";
-
-        console.error("❌ API Error:", errorMessage);
-        console.error("❌ Full Response:", JSON.stringify(response.data));
-
-        throw new Error(errorMessage);
-      }
-    } catch (error) {
-      console.error("❌ PhonePe Payment Error:", error);
-
-      let errorMessage = "Payment initiation failed. Please try again.";
-
-      if (error.response) {
-        console.error("Server Error Response:", error.response.data);
-        errorMessage =
-          error.response.data?.message ||
-          error.response.data?.error ||
-          `Server Error: ${error.response.status}`;
-      } else if (error.request) {
-        console.error("No Response from Server");
-        errorMessage =
-          "Cannot connect to payment server. Please check your internet connection.";
-      } else {
-        errorMessage = error.message || errorMessage;
-      }
-
-      Alert.alert(
-        "Payment Failed",
-        errorMessage,
-        [
-          {
-            text: "Retry",
-            onPress: () => handlePhonePePayment(),
-          },
-          {
-            text: "Cancel",
-            style: "cancel",
-            onPress: () => router.back(),
-          },
-        ],
-        { cancelable: false }
-      );
-    } finally {
-      setIsProcessing(false);
-    }
+    import("react-native").then(({ Linking }) => {
+      Linking.openURL(paymentUrl).catch(() => {
+        Alert.alert("Error", "Could not open the payment page.");
+      });
+    });
   };
 
   const handleOfflinePayment = () => {
